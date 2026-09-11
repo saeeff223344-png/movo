@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg-base: #ffffff;
+  --bg-surface: #f6f6fb;
+  --bg-elevated: #ffffff;
+  --bg-inverse: #0a0a13;
+  --text-primary: #0a0a13;
+  --text-secondary: rgba(10, 10, 19, 0.68);
+  --text-muted: rgba(10, 10, 19, 0.48);
+  --text-inverse: #ffffff;
+  --border-subtle: rgba(10, 10, 19, 0.08);
+  --border-strong: rgba(10, 10, 19, 0.16);
+  --surface-hover: rgba(10, 10, 19, 0.04);
+  --grid-line: rgba(10, 10, 19, 0.06);
+}
+
+.dark {
+  --bg-base: #05050a;
+  --bg-surface: #0a0a13;
+  --bg-elevated: #0f0f1c;
+  --bg-inverse: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.45);
+  --text-inverse: #0a0a13;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --grid-line: rgba(255, 255, 255, 0.05);
+}
+
+@theme inline {
+  --font-sans: var(--font-cairo), "Tajawal", ui-sans-serif, system-ui, sans-serif;
+
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-inverse: var(--bg-inverse);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-on-inverse: var(--text-inverse);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-surface-hover: var(--surface-hover);
+
+  --color-brand-50: #f2f1ff;
+  --color-brand-100: #e6e3ff;
+  --color-brand-200: #cbc4ff;
+  --color-brand-300: #a598ff;
+  --color-brand-400: #8467ff;
+  --color-brand-500: #6d3ff5;
+  --color-brand-600: #5b24e0;
+  --color-brand-700: #4a1bb8;
+  --color-brand-800: #3c1893;
+  --color-brand-900: #2f1573;
+
+  --color-accent-400: #ff9a5a;
+  --color-accent-500: #ff7a3d;
+  --color-accent-600: #f4602a;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-glow: glow 4s ease-in-out infinite;
+  --animate-marquee: marquee 30s linear infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-16px);
+    }
+  }
+
+  @keyframes glow {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-primary);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+::selection {
+  background-color: var(--color-brand-500);
+  color: white;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(to left, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.glass-panel {
+  background-color: color-mix(in srgb, var(--color-elevated) 60%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

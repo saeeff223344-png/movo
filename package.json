@@ -1,28 +1,41 @@
 {
   "name": "motion-arabic",
   "version": "1.0.0",
-  "description": "My Remotion video",
+  "description": "MOVO — Arabic-first motion graphics video platform",
   "repository": {},
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@remotion/cli": "4.0.521",
+    "@remotion/cli": "^4.0.523",
+    "@remotion/player": "^4.0.523",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "lucide-react": "^0.544.0",
+    "next": "^16.3.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "remotion": "4.0.521"
+    "remotion": "^4.0.523",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "@remotion/eslint-config-flat": "4.0.521",
+    "@remotion/eslint-config-flat": "^4.0.523",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
-    "eslint": "9.19.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.4",
     "prettier": "3.8.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "5.9.3"
   },
   "scripts": {
-    "dev": "remotion studio",
-    "build": "remotion bundle",
-    "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "studio": "remotion studio remotion/index.ts",
+    "remotion:bundle": "remotion bundle remotion/index.ts",
+    "remotion:upgrade": "remotion upgrade",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   }
 }

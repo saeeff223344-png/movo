@@ -1,0 +1,48 @@
+"use client";
+
+import { useState } from "react";
+import { Info } from "lucide-react";
+import { useI18n } from "@/lib/i18n/context";
+import { mockSubscription, type PlanId, type SubscriptionStatus } from "@/lib/data/subscription";
+import { mockTrial } from "@/lib/data/trial";
+import { StatusCard } from "@/components/subscription/StatusCard";
+import { PlanCards } from "@/components/subscription/PlanCards";
+import { ActivationForm } from "@/components/subscription/ActivationForm";
+import { HowToGetCode } from "@/components/subscription/HowToGetCode";
+
+export function SubscriptionView() {
+  const { t } = useI18n();
+  const [subscription, setSubscription] = useState<SubscriptionStatus>(mockSubscription);
+
+  function handleActivated(plan: PlanId, expiryDate: string) {
+    setSubscription({
+      active: true,
+      plan,
+      startDate: new Date().toISOString().slice(0, 10),
+      expiryDate: expiryDate.slice(0, 10),
+    });
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-8">
+      <div>
+        <h1 className="text-2xl font-extrabold text-primary sm:text-3xl">
+          {t("subscription.title")}
+        </h1>
+        <p className="mt-1 text-sm text-secondary">{t("subscription.subtitle")}</p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-2xl border border-brand-500/25 bg-brand-500/5 p-4 text-sm leading-relaxed text-secondary">
+        <Info className="mt-0.5 size-4 shrink-0 text-brand-400" />
+        <p>
+          {mockTrial.used ? t("subscription.noFreePlanTrialUsed") : t("subscription.noFreePlanNotice")}
+        </p>
+      </div>
+
+      <StatusCard subscription={subscription} />
+      <PlanCards activePlan={subscription.plan} />
+      <ActivationForm onActivated={handleActivated} />
+      <HowToGetCode />
+    </div>
+  );
+}
