@@ -53,6 +53,8 @@ export type ExampleVideo = {
   descriptionEn: string;
   category: ExampleCategory;
   thumbnailGradient: string;
+  thumbnailUrl: string | null;
+  aspectRatio: "9:16" | "16:9" | "1:1";
   videoUrl: string | null;
   styleHint: string;
   promptExample: string;

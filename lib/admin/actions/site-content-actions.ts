@@ -56,6 +56,8 @@ export async function createExampleAction(
       description_en: input.descriptionEn,
       category: input.category,
       thumbnail_gradient: input.thumbnailGradient,
+      thumbnail_url: input.thumbnailUrl,
+      aspect_ratio: input.aspectRatio,
       video_url: input.videoUrl,
       style_hint: input.styleHint,
       prompt_example: input.promptExample,
@@ -68,6 +70,7 @@ export async function createExampleAction(
   if (error || !data) return { ok: false, error: error?.message ?? "INSERT_FAILED" };
   revalidatePath("/admin/examples");
   revalidatePath("/templates");
+  revalidatePath("/");
   return { ok: true, id: data.id };
 }
 
@@ -86,12 +89,66 @@ export async function updateExampleAction(id: string, patch: Partial<ExampleVide
   if (patch.featured !== undefined) update.featured = patch.featured;
   if (patch.displayOrder !== undefined) update.display_order = patch.displayOrder;
   if (patch.active !== undefined) update.active = patch.active;
+  if (patch.aspectRatio !== undefined) update.aspect_ratio = patch.aspectRatio;
 
   const { error } = await supabase.from("examples").update(update).eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/examples");
   revalidatePath("/templates");
+  revalidatePath("/");
   return { ok: true };
+}
+
+/**
+ * Uploads a real thumbnail to the site-assets bucket (public, admin-managed
+ * — see 006_storage_rls.sql) and records it in examples.thumbnail_url. Also
+ * logs it in `assets` (category "examples") so it shows up in /admin/assets
+ * too, same as any other admin-uploaded file. Storage RLS on site-assets
+ * requires assets.manage specifically (not examples.manage) — that's an
+ * existing 006 policy, not something introduced here.
+ */
+export async function uploadExampleThumbnailAction(
+  exampleId: string,
+  formData: FormData,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  await requirePermission("assets", "manage");
+  const actor = await requireUser();
+  const supabase = await createClient();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "NO_FILE" };
+  if (!file.type.startsWith("image/")) return { ok: false, error: "INVALID_TYPE" };
+
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `examples/${exampleId}-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage.from("site-assets").upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (uploadError) return { ok: false, error: uploadError.message };
+
+  const { data: publicUrlData } = supabase.storage.from("site-assets").getPublicUrl(path);
+  const url = publicUrlData.publicUrl;
+
+  const { error: updateError } = await supabase.from("examples").update({ thumbnail_url: url }).eq("id", exampleId);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  await supabase.from("assets").insert({
+    filename: file.name,
+    category: "examples",
+    type: "image",
+    storage_path: path,
+    size_kb: Math.round(file.size / 1024),
+    usage_ref: `examples/${exampleId}`,
+    uploaded_by: actor.id,
+  });
+
+  revalidatePath("/admin/examples");
+  revalidatePath("/admin/assets");
+  revalidatePath("/templates");
+  revalidatePath("/");
+  return { ok: true, url };
 }
 
 // ---- FAQ ----

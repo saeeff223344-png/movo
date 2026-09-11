@@ -50,6 +50,8 @@ function mapExample(e: {
   featured: boolean;
   display_order: number;
   active: boolean;
+  thumbnail_url: string | null;
+  aspect_ratio: string | null;
 }): ExampleVideo {
   return {
     id: e.id,
@@ -59,6 +61,8 @@ function mapExample(e: {
     descriptionEn: e.description_en,
     category: e.category as ExampleVideo["category"],
     thumbnailGradient: e.thumbnail_gradient ?? "from-brand-400 to-accent-500",
+    thumbnailUrl: e.thumbnail_url,
+    aspectRatio: (e.aspect_ratio ?? "9:16") as ExampleVideo["aspectRatio"],
     videoUrl: e.video_url,
     styleHint: e.style_hint ?? "",
     promptExample: e.prompt_example ?? "",

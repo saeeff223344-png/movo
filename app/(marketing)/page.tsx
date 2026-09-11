@@ -9,14 +9,15 @@ import { TrialTeaser } from "@/components/home/TrialTeaser";
 import { SubscriptionTeaser } from "@/components/home/SubscriptionTeaser";
 import { FinalCta } from "@/components/home/FinalCta";
 import { getPublicPlans } from "@/lib/supabase/plans";
+import { getPublicExamples } from "@/lib/supabase/examples";
 
 export default async function HomePage() {
-  const plans = await getPublicPlans();
+  const [plans, examples] = await Promise.all([getPublicPlans(), getPublicExamples()]);
   return (
     <>
       <Hero />
       <ValueStatement />
-      <Examples />
+      <Examples examples={examples} />
       <HowItWorks />
       <VideoTypes />
       <Features />

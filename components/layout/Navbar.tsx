@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
+import { AccountMenu } from "@/components/layout/AccountMenu";
 import { useI18n } from "@/lib/i18n/context";
 
-export function Navbar() {
+export function Navbar({ user }: { user: { fullName: string; email: string } | null }) {
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
 
@@ -27,13 +29,13 @@ export function Navbar() {
 
         <div className="hidden items-center gap-8 lg:flex">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               className="text-sm font-medium text-secondary transition-colors hover:text-primary"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -41,12 +43,18 @@ export function Navbar() {
           <LanguageSwitcher />
           <ThemeSwitcher />
           <span className="mx-1 h-6 w-px bg-border-subtle" />
-          <Button href="/login" variant="ghost" size="sm">
-            {t("nav.login")}
-          </Button>
-          <Button href="/signup" size="sm">
-            {t("nav.signup")}
-          </Button>
+          {user ? (
+            <AccountMenu user={user} />
+          ) : (
+            <>
+              <Button href="/login" variant="ghost" size="sm">
+                {t("nav.login")}
+              </Button>
+              <Button href="/signup" size="sm">
+                {t("nav.signup")}
+              </Button>
+            </>
+          )}
         </div>
 
         <button
@@ -64,14 +72,14 @@ export function Navbar() {
         <div className="border-t border-border-subtle bg-base px-5 pb-6 pt-2 lg:hidden">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-3 py-3 text-sm font-medium text-secondary hover:bg-surface-hover hover:text-primary"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
           <div className="mt-4 flex items-center gap-3">
@@ -79,10 +87,16 @@ export function Navbar() {
             <ThemeSwitcher />
           </div>
           <div className="mt-4 flex flex-col gap-3">
-            <Button href="/login" variant="outline">
-              {t("nav.login")}
-            </Button>
-            <Button href="/signup">{t("nav.signup")}</Button>
+            {user ? (
+              <Button href="/dashboard">{t("nav.dashboard")}</Button>
+            ) : (
+              <>
+                <Button href="/login" variant="outline">
+                  {t("nav.login")}
+                </Button>
+                <Button href="/signup">{t("nav.signup")}</Button>
+              </>
+            )}
           </div>
         </div>
       )}

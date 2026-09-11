@@ -11,6 +11,7 @@ type FormFieldProps = {
   type?: "text" | "email" | "password";
   placeholder?: string;
   autoComplete?: string;
+  defaultValue?: string;
 };
 
 export function FormField({
@@ -20,6 +21,7 @@ export function FormField({
   type = "text",
   placeholder,
   autoComplete,
+  defaultValue,
 }: FormFieldProps) {
   const id = useId();
   const [visible, setVisible] = useState(false);
@@ -42,6 +44,7 @@ export function FormField({
           required
           placeholder={placeholder}
           autoComplete={autoComplete}
+          defaultValue={defaultValue}
           className="w-full rounded-xl border border-border-subtle bg-surface py-3 pe-11 ps-11 text-sm text-primary placeholder-muted outline-none transition-colors focus:border-brand-400/60 focus:bg-surface-hover"
         />
         {isPassword && (

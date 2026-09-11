@@ -319,6 +319,8 @@ export type Database = {
         featured: boolean;
         display_order: number;
         active: boolean;
+        thumbnail_url: string | null;
+        aspect_ratio: "9:16" | "16:9" | "1:1" | null;
       }>;
       faq_items: Table<{
         id: string;
@@ -559,6 +561,7 @@ export type Database = {
       consume_trial: { Args: { p_project_id?: string; p_video_id?: string }; Returns: Json };
       grant_trial: { Args: { p_user_id: string }; Returns: Json };
       reset_trial: { Args: { p_user_id: string; p_reason?: string }; Returns: Json };
+      get_contact_settings: { Args: Record<string, never>; Returns: Json };
     };
     Enums: Record<string, never>;
   };

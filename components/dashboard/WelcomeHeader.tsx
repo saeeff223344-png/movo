@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
-import { mockUser } from "@/lib/data/user";
 
-export function WelcomeHeader() {
+export function WelcomeHeader({ fullName }: { fullName: string }) {
   const { t, locale } = useI18n();
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
@@ -28,7 +27,7 @@ export function WelcomeHeader() {
       <div className="relative">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
           <Sparkles className="size-3.5" />
-          {t("dashboard.welcomeBack")}, {mockUser.fullName}
+          {t("dashboard.welcomeBack")}, {fullName}
         </span>
         <h1 className="mt-3 text-2xl font-extrabold text-white sm:text-3xl">
           {t("dashboard.whatWillWeMake")}

@@ -3,7 +3,7 @@
 import { Inbox } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useI18n } from "@/lib/i18n/context";
-import { mockSupportRequests, type SupportStatus } from "@/lib/data/support-requests";
+import type { SupportRequest, SupportStatus } from "@/lib/data/support-requests";
 
 const STATUS_STYLES: Record<SupportStatus, string> = {
   new: "bg-brand-500/15 text-brand-400",
@@ -17,7 +17,7 @@ const STATUS_KEY: Record<SupportStatus, string> = {
   resolved: "support.statusResolved",
 };
 
-export function RequestsList() {
+export function RequestsList({ requests }: { requests: SupportRequest[] }) {
   const { t } = useI18n();
 
   return (
@@ -26,11 +26,11 @@ export function RequestsList() {
         {t("support.myRequestsTitle")}
       </h2>
 
-      {mockSupportRequests.length === 0 ? (
+      {requests.length === 0 ? (
         <EmptyState icon={Inbox} title={t("support.noRequests")} description="" />
       ) : (
         <div className="space-y-3">
-          {mockSupportRequests.map((req) => (
+          {requests.map((req) => (
             <div
               key={req.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface px-5 py-4"

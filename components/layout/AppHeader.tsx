@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
@@ -28,13 +29,13 @@ export function AppHeader({ user }: { user: { fullName: string; email: string } 
           <Logo href="/dashboard" />
           <div className="hidden items-center gap-6 xl:flex">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 className="text-sm font-medium text-secondary transition-colors hover:text-primary"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -66,14 +67,14 @@ export function AppHeader({ user }: { user: { fullName: string; email: string } 
         <div className="border-t border-border-subtle bg-base px-5 pb-6 pt-2 lg:hidden">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-3 py-3 text-sm font-medium text-secondary hover:bg-surface-hover hover:text-primary"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
           <div className="mt-4 flex items-center gap-3">

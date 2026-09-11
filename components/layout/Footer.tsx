@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Instagram, Twitter, Youtube } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { useI18n } from "@/lib/i18n/context";
@@ -63,12 +64,12 @@ export function Footer() {
               <ul className="mt-4 space-y-3">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <a
+                    <Link
                       href={link.href}
                       className="text-sm text-muted transition-colors hover:text-primary"
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

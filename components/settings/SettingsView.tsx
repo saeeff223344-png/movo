@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CreditCard, Info, Languages, LifeBuoy, Shield, SunMoon, User, Users } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
 import { ProfileSection } from "@/components/settings/ProfileSection";
@@ -20,7 +21,13 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-export function SettingsView({ subscription }: { subscription: SubscriptionStatus }) {
+export function SettingsView({
+  subscription,
+  profile,
+}: {
+  subscription: SubscriptionStatus;
+  profile: { fullName: string; email: string };
+}) {
   const { t } = useI18n();
   const [active, setActive] = useState<TabId>("profile");
 
@@ -53,7 +60,7 @@ export function SettingsView({ subscription }: { subscription: SubscriptionStatu
         </div>
 
         <div>
-          {active === "profile" && <ProfileSection />}
+          {active === "profile" && <ProfileSection profile={profile} />}
           {active === "language" && <LanguageSection />}
           {active === "theme" && <ThemeSection />}
           {active === "subscription" && <SubscriptionSection subscription={subscription} />}
@@ -65,14 +72,14 @@ export function SettingsView({ subscription }: { subscription: SubscriptionStatu
               { href: "/about", icon: Info, label: t("nav.about") },
               { href: "/developers", icon: Users, label: t("nav.developers") },
             ].map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-3.5 py-2 text-xs font-semibold text-secondary transition-colors hover:border-border-strong hover:text-primary"
               >
                 <link.icon className="size-3.5" />
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
         </div>

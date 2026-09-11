@@ -3,8 +3,9 @@
 import { useI18n } from "@/lib/i18n/context";
 import { SupportForm } from "@/components/support/SupportForm";
 import { RequestsList } from "@/components/support/RequestsList";
+import type { SupportRequest } from "@/lib/data/support-requests";
 
-export function SupportView() {
+export function SupportView({ requests }: { requests: SupportRequest[] }) {
   const { t } = useI18n();
 
   return (
@@ -18,7 +19,7 @@ export function SupportView() {
 
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <SupportForm />
-        <RequestsList />
+        <RequestsList requests={requests} />
       </div>
     </div>
   );

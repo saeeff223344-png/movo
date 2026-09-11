@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n/context";
-import { mockTemplates, TEMPLATE_CATEGORIES, type TemplateCategory } from "@/lib/data/templates";
+import { TEMPLATE_CATEGORIES, type TemplateCategory } from "@/lib/data/templates";
 import { TemplateCard } from "@/components/templates/TemplateCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Film } from "lucide-react";
+import type { PublicExample } from "@/lib/supabase/examples";
 
 const CATEGORY_KEY: Record<TemplateCategory, string> = {
   restaurant: "templatesPage.categoryRestaurant",
@@ -14,12 +17,12 @@ const CATEGORY_KEY: Record<TemplateCategory, string> = {
   business: "templatesPage.categoryBusiness",
 };
 
-export function TemplatesLibraryView() {
+export function TemplatesLibraryView({ examples }: { examples: PublicExample[] }) {
   const { t } = useI18n();
   const [filter, setFilter] = useState<TemplateCategory | "all">("all");
 
   const filtered =
-    filter === "all" ? mockTemplates : mockTemplates.filter((tpl) => tpl.category === filter);
+    filter === "all" ? examples : examples.filter((ex) => ex.category === filter);
 
   return (
     <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
@@ -58,11 +61,17 @@ export function TemplatesLibraryView() {
         ))}
       </div>
 
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((tpl) => (
-          <TemplateCard key={tpl.id} template={tpl} />
-        ))}
-      </div>
+      {filtered.length === 0 ? (
+        <div className="mt-10">
+          <EmptyState icon={Film} title={t("templatesPage.empty")} description="" />
+        </div>
+      ) : (
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((ex) => (
+            <TemplateCard key={ex.id} example={ex} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
