@@ -8,6 +8,7 @@ import { LanguageSection } from "@/components/settings/LanguageSection";
 import { ThemeSection } from "@/components/settings/ThemeSection";
 import { SubscriptionSection } from "@/components/settings/SubscriptionSection";
 import { SecuritySection } from "@/components/settings/SecuritySection";
+import type { SubscriptionStatus } from "@/lib/types/account";
 
 const TABS = [
   { id: "profile", icon: User, labelKey: "settings.tabProfile" },
@@ -19,7 +20,7 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-export function SettingsView() {
+export function SettingsView({ subscription }: { subscription: SubscriptionStatus }) {
   const { t } = useI18n();
   const [active, setActive] = useState<TabId>("profile");
 
@@ -55,7 +56,7 @@ export function SettingsView() {
           {active === "profile" && <ProfileSection />}
           {active === "language" && <LanguageSection />}
           {active === "theme" && <ThemeSection />}
-          {active === "subscription" && <SubscriptionSection />}
+          {active === "subscription" && <SubscriptionSection subscription={subscription} />}
           {active === "security" && <SecuritySection />}
 
           <div className="mt-8 flex flex-wrap gap-3 border-t border-border-subtle pt-6">

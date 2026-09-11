@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2, KeySquare, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { redeemActivationCode } from "@/lib/actions/redeem-code";
-import type { PlanId } from "@/lib/data/subscription";
+import type { PlanId } from "@/lib/types/account";
 
 type DisplayStatus = "valid" | "invalid" | "used" | "expired" | "error";
 

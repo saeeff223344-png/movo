@@ -10,8 +10,6 @@ import { ResultView } from "@/components/create/ResultView";
 import { Button } from "@/components/ui/Button";
 import { generateScenePlan, generateVideoBrief, briefToAdProps } from "@/lib/mock/generation";
 import { applyRevision, REVISION_SIMULATION_MS } from "@/lib/mock/revisions";
-import { mockTrial } from "@/lib/data/trial";
-import { mockSubscription } from "@/lib/data/subscription";
 import { STYLE_HINT_PROMPT_KEY } from "@/lib/data/style-hints";
 import type { TemplateCategory } from "@/lib/data/templates";
 import type { Asset, GenerationSettings, Revision, ScenePlan, VideoBrief } from "@/lib/types/video";
@@ -27,7 +25,7 @@ const DEFAULT_SETTINGS: GenerationSettings = {
 
 type Stage = "compose" | "generating" | "result";
 
-export function CreateWorkspace() {
+export function CreateWorkspace({ trialUsed, subscriptionActive }: { trialUsed: boolean; subscriptionActive: boolean }) {
   const { t } = useI18n();
   const searchParams = useSearchParams();
 
@@ -51,7 +49,7 @@ export function CreateWorkspace() {
   const [revisions, setRevisions] = useState<Revision[]>([]);
   const [isApplyingRevision, setIsApplyingRevision] = useState(false);
 
-  const trialBlocked = mockTrial.used && !mockSubscription.active;
+  const trialBlocked = trialUsed && !subscriptionActive;
 
   function handleGenerate() {
     if (!prompt.trim() || trialBlocked) return;

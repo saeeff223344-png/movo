@@ -8,8 +8,10 @@ import { Quality } from "@/components/home/Quality";
 import { TrialTeaser } from "@/components/home/TrialTeaser";
 import { SubscriptionTeaser } from "@/components/home/SubscriptionTeaser";
 import { FinalCta } from "@/components/home/FinalCta";
+import { getPublicPlans } from "@/lib/supabase/plans";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const plans = await getPublicPlans();
   return (
     <>
       <Hero />
@@ -20,7 +22,7 @@ export default function HomePage() {
       <Features />
       <Quality />
       <TrialTeaser />
-      <SubscriptionTeaser />
+      <SubscriptionTeaser plans={plans} />
       <FinalCta />
     </>
   );

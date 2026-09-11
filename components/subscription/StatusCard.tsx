@@ -2,7 +2,7 @@
 
 import { CalendarCheck, CalendarClock, Wallet } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
-import type { SubscriptionStatus } from "@/lib/data/subscription";
+import type { SubscriptionStatus } from "@/lib/types/account";
 
 export function StatusCard({ subscription }: { subscription: SubscriptionStatus }) {
   const { t } = useI18n();

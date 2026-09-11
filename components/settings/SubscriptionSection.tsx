@@ -3,9 +3,9 @@
 import { ArrowLeft, ArrowRight, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
-import { mockSubscription } from "@/lib/data/subscription";
+import type { SubscriptionStatus } from "@/lib/types/account";
 
-export function SubscriptionSection() {
+export function SubscriptionSection({ subscription }: { subscription: SubscriptionStatus }) {
   const { t, locale } = useI18n();
   const Arrow = locale === "ar" ? ArrowLeft : ArrowRight;
 
@@ -18,13 +18,13 @@ export function SubscriptionSection() {
           </span>
           <div>
             <p className="font-bold text-primary">
-              {mockSubscription.active
+              {subscription.active
                 ? t("subscription.statusActive")
                 : t("subscription.statusInactive")}
             </p>
             <p className="text-xs text-muted">
-              {mockSubscription.active
-                ? `${t("subscription.expiryDate")}: ${mockSubscription.expiryDate}`
+              {subscription.active
+                ? `${t("subscription.expiryDate")}: ${subscription.expiryDate}`
                 : t("dashboard.subInactiveDesc")}
             </p>
           </div>

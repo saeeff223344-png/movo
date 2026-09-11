@@ -3,10 +3,9 @@
 import { ArrowLeft, ArrowRight, Film, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/context";
-import { mockTrial } from "@/lib/data/trial";
-import { mockSubscription } from "@/lib/data/subscription";
+import type { SubscriptionStatus, TrialStatus } from "@/lib/types/account";
 
-export function StatusCards() {
+export function StatusCards({ trial, subscription }: { trial: TrialStatus; subscription: SubscriptionStatus }) {
   const { t, locale } = useI18n();
   const Arrow = locale === "ar" ? ArrowLeft : ArrowRight;
 
@@ -19,12 +18,12 @@ export function StatusCards() {
           </span>
           <span
             className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-              mockTrial.used
+              trial.used
                 ? "bg-amber-500/15 text-amber-500"
                 : "bg-emerald-500/15 text-emerald-500"
             }`}
           >
-            {mockTrial.used
+            {trial.used
               ? t("dashboard.trialUsed")
               : t("dashboard.trialAvailable")}
           </span>
@@ -33,7 +32,7 @@ export function StatusCards() {
           {t("dashboard.trialCardTitle")}
         </h3>
         <p className="mt-1 text-sm text-muted">
-          {mockTrial.used
+          {trial.used
             ? t("dashboard.trialUsedDesc")
             : t("dashboard.trialAvailableDesc")}
         </p>
@@ -46,12 +45,12 @@ export function StatusCards() {
           </span>
           <span
             className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
-              mockSubscription.active
+              subscription.active
                 ? "bg-emerald-500/15 text-emerald-500"
                 : "bg-white/10 text-muted"
             }`}
           >
-            {mockSubscription.active
+            {subscription.active
               ? t("dashboard.subActive")
               : t("dashboard.subInactive")}
           </span>
@@ -60,8 +59,8 @@ export function StatusCards() {
           {t("dashboard.subCardTitle")}
         </h3>
         <p className="mt-1 text-sm text-muted">
-          {mockSubscription.active
-            ? `${t("dashboard.subExpiresOn")}: ${mockSubscription.expiryDate}`
+          {subscription.active
+            ? `${t("dashboard.subExpiresOn")}: ${subscription.expiryDate}`
             : t("dashboard.subInactiveDesc")}
         </p>
         <Link
