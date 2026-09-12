@@ -775,6 +775,7 @@ export const en: Dictionary = {
       rejectPayment: "This payment will be rejected.",
       deleteFaq: "This question will be permanently deleted.",
       deleteDeveloper: "This team member will be permanently removed from the developers page.",
+      deleteSubscriptionContact: "This WhatsApp contact will be permanently deleted.",
       killSwitch: "This is an emergency action affecting all users immediately. Confirm before proceeding.",
     },
     tabs: {
@@ -1171,6 +1172,14 @@ export const en: Dictionary = {
       whatsapp: "WhatsApp",
       email: "Email address",
       workingHours: "Working hours",
+      subscriptionContactsTitle: "WhatsApp activation contacts",
+      subscriptionContactsDesc:
+        "Named WhatsApp contacts shown on the subscription page for activation — one button per contact, in this order. Falls back to the single WhatsApp field above when the list is empty.",
+      addContact: "Add contact",
+      editContact: "Edit contact",
+      contactName: "Contact name",
+      whatsappNumber: "WhatsApp number",
+      noContacts: "No contacts yet — the single WhatsApp field above is shown instead.",
     },
     limits: {
       maxPromptLength: "Max prompt length",

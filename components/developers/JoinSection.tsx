@@ -3,6 +3,7 @@
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
 import type { SupportContact } from "@/lib/supabase/contact";
+import { buildWhatsAppLink } from "@/lib/utils/whatsapp";
 
 /**
  * Real WhatsApp/phone/email — read from system_settings.support_contact
@@ -17,7 +18,7 @@ export function JoinSection({ contact }: { contact: SupportContact | null }) {
   const channels = contact
     ? [
         contact.whatsapp.enabled && contact.whatsapp.value
-          ? { key: "whatsapp", icon: MessageCircle, label: t("subscription.contactWhatsapp"), href: `https://wa.me/${contact.whatsapp.value.replace(/[^0-9]/g, "")}` }
+          ? { key: "whatsapp", icon: MessageCircle, label: t("subscription.contactWhatsapp"), href: buildWhatsAppLink(contact.whatsapp.value) }
           : null,
         contact.phone.enabled && contact.phone.value
           ? { key: "phone", icon: Phone, label: t("subscription.contactPhone"), href: `tel:${contact.phone.value.replace(/\s/g, "")}` }

@@ -64,6 +64,21 @@ export type PaymentContactSettings = {
   instructionsEn: string;
 };
 
+/**
+ * One of possibly several WhatsApp contacts for subscription activation
+ * (public.subscription_contacts — 014_subscription_contacts.sql). Separate
+ * from SubscriptionContactSettings.whatsapp (a single legacy field kept for
+ * backward compatibility, no longer shown publicly once this list has rows).
+ */
+export type SubscriptionContactPerson = {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  whatsapp: string;
+  active: boolean;
+  displayOrder: number;
+};
+
 export type BusinessInfo = {
   displayName: string;
   legalName: string;

@@ -4,6 +4,7 @@ import { Github, Globe, Instagram, Linkedin, Mail, MessageCircle, Users, X as XI
 import { useI18n } from "@/lib/i18n/context";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { PublicDeveloper } from "@/lib/supabase/developers";
+import { buildWhatsAppLink } from "@/lib/utils/whatsapp";
 
 export function TeamGrid({ developers }: { developers: PublicDeveloper[] }) {
   const { t, locale } = useI18n();
@@ -25,7 +26,7 @@ export function TeamGrid({ developers }: { developers: PublicDeveloper[] }) {
 
         const links = [
           member.email ? { href: `mailto:${member.email}`, icon: Mail } : null,
-          member.whatsapp ? { href: `https://wa.me/${member.whatsapp.replace(/[^0-9]/g, "")}`, icon: MessageCircle } : null,
+          member.whatsapp ? { href: buildWhatsAppLink(member.whatsapp), icon: MessageCircle } : null,
           member.instagram ? { href: member.instagram, icon: Instagram } : null,
           member.github ? { href: member.github, icon: Github } : null,
           member.linkedin ? { href: member.linkedin, icon: Linkedin } : null,

@@ -6,6 +6,7 @@ import type {
   SystemHealthServiceEntry,
   LocalizationSettings,
   EmailSettings,
+  SubscriptionContactPerson,
 } from "@/lib/admin/types/system";
 import { createClient } from "@/lib/supabase/server";
 
@@ -171,4 +172,20 @@ export async function getEmailSettings(): Promise<EmailSettings> {
       bodyEn: tpl.body_en,
     })),
   };
+}
+
+// ---- Subscription WhatsApp contacts (requires migration 014) ----
+export async function getSubscriptionContacts(): Promise<SubscriptionContactPerson[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("subscription_contacts").select("*").order("display_order");
+  if (error || !data) return [];
+
+  return data.map((c) => ({
+    id: c.id,
+    nameAr: c.name_ar,
+    nameEn: c.name_en,
+    whatsapp: c.whatsapp,
+    active: c.active,
+    displayOrder: c.display_order,
+  }));
 }

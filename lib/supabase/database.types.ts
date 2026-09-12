@@ -549,6 +549,17 @@ export type Database = {
         updated_at: string;
         updated_by: string | null;
       }>;
+      // 014_subscription_contacts.sql
+      subscription_contacts: Table<{
+        id: string;
+        name_ar: string;
+        name_en: string;
+        whatsapp: string;
+        active: boolean;
+        display_order: number;
+        created_at: string;
+        updated_at: string;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {

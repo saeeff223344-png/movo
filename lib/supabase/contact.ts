@@ -29,6 +29,38 @@ export type PaymentContact = {
   instructionsEn: string;
 };
 
+export type SubscriptionContactPerson = {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  whatsapp: string;
+};
+
+/**
+ * Active rows from public.subscription_contacts (014_subscription_contacts.sql),
+ * ordered for display. RLS already limits an anon/authenticated caller to
+ * active=true; the eq("active", true) here just makes that intent explicit
+ * rather than relying solely on the policy. Falls back to [] (never throws)
+ * so callers can treat "no contacts configured yet" and "query failed" the
+ * same way: show the legacy subscriptionContact.whatsapp field instead.
+ */
+export async function getSubscriptionContacts(): Promise<SubscriptionContactPerson[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_contacts")
+    .select("id, name_ar, name_en, whatsapp")
+    .eq("active", true)
+    .order("display_order");
+  if (error || !data) return [];
+
+  return data.map((c) => ({
+    id: c.id,
+    nameAr: c.name_ar,
+    nameEn: c.name_en,
+    whatsapp: c.whatsapp,
+  }));
+}
+
 type AllContactSettings = {
   supportContact?: SupportContact;
   subscriptionContact?: SubscriptionContact;

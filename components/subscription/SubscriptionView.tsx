@@ -9,7 +9,7 @@ import { PlanCards } from "@/components/subscription/PlanCards";
 import { ActivationForm } from "@/components/subscription/ActivationForm";
 import { HowToGetCode } from "@/components/subscription/HowToGetCode";
 import type { PublicPlan } from "@/lib/supabase/plans";
-import type { SubscriptionContact, PaymentContact } from "@/lib/supabase/contact";
+import type { SubscriptionContact, PaymentContact, SubscriptionContactPerson } from "@/lib/supabase/contact";
 
 export function SubscriptionView({
   initialSubscription,
@@ -17,12 +17,14 @@ export function SubscriptionView({
   plans,
   contact,
   paymentContact,
+  subscriptionContacts,
 }: {
   initialSubscription: SubscriptionStatus;
   trialUsed: boolean;
   plans: PublicPlan[] | null;
   contact: SubscriptionContact | null;
   paymentContact: PaymentContact | null;
+  subscriptionContacts: SubscriptionContactPerson[];
 }) {
   const { t } = useI18n();
   const [subscription, setSubscription] = useState<SubscriptionStatus>(initialSubscription);
@@ -55,7 +57,7 @@ export function SubscriptionView({
       <StatusCard subscription={subscription} />
       <PlanCards activePlan={subscription.plan} plans={plans} />
       <ActivationForm onActivated={handleActivated} />
-      <HowToGetCode contact={contact} paymentContact={paymentContact} />
+      <HowToGetCode contact={contact} paymentContact={paymentContact} subscriptionContacts={subscriptionContacts} />
     </div>
   );
 }

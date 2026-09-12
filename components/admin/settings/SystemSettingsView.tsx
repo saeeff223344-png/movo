@@ -10,10 +10,11 @@ import { FieldLabel, NumberInput, TextInput } from "@/components/admin/ui/FormFi
 import { Toggle } from "@/components/admin/ui/Toggle";
 import { Button } from "@/components/ui/Button";
 import { AuthError } from "@/components/auth/AuthError";
-import type { SystemSettings } from "@/lib/admin/types/system";
+import type { SystemSettings, SubscriptionContactPerson } from "@/lib/admin/types/system";
 import type { BrandingSettings } from "@/lib/admin/types/site";
 import { updateSystemSettingsAction } from "@/lib/admin/actions/system-actions";
 import { updateBrandingSettingsAction } from "@/lib/admin/actions/site-appearance-actions";
+import { SubscriptionContactsManager } from "@/components/admin/settings/SubscriptionContactsManager";
 
 const TABS = [
   "business",
@@ -31,9 +32,11 @@ type TabId = (typeof TABS)[number];
 export function SystemSettingsView({
   settings: initialSettings,
   branding: initialBranding,
+  subscriptionContacts,
 }: {
   settings: SystemSettings;
   branding: BrandingSettings;
+  subscriptionContacts: SubscriptionContactPerson[];
 }) {
   const { t } = useI18n();
   const [settings, setSettings] = useState(initialSettings);
@@ -173,6 +176,13 @@ export function SystemSettingsView({
                 <SettingsRow label={t("admin.contact.whatsapp")}>
                   <TextInput value={settings.subscriptionContact.whatsapp.value} onChange={(v) => setSettings({ ...settings, subscriptionContact: { ...settings.subscriptionContact, whatsapp: { ...settings.subscriptionContact.whatsapp, value: v } } })} dir="ltr" />
                 </SettingsRow>
+              </SettingsSection>
+
+              <SettingsSection
+                title={t("admin.contact.subscriptionContactsTitle")}
+                description={t("admin.contact.subscriptionContactsDesc")}
+              >
+                <SubscriptionContactsManager contacts={subscriptionContacts} />
               </SettingsSection>
 
               <SettingsSection title={t("admin.contact.paymentTitle")}>

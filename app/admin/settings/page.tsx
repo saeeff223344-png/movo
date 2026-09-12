@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSystemSettings } from "@/lib/admin/services/system";
+import { getSystemSettings, getSubscriptionContacts } from "@/lib/admin/services/system";
 import { getBrandingSettings } from "@/lib/admin/services/site-appearance";
 import { SystemSettingsView } from "@/components/admin/settings/SystemSettingsView";
 
@@ -8,6 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminSettingsPage() {
-  const [settings, branding] = await Promise.all([getSystemSettings(), getBrandingSettings()]);
-  return <SystemSettingsView settings={settings} branding={branding} />;
+  const [settings, branding, subscriptionContacts] = await Promise.all([
+    getSystemSettings(),
+    getBrandingSettings(),
+    getSubscriptionContacts(),
+  ]);
+  return <SystemSettingsView settings={settings} branding={branding} subscriptionContacts={subscriptionContacts} />;
 }

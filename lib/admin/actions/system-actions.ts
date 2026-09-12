@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { requirePermission, requireUser } from "@/lib/supabase/auth-helpers";
 import { createClient } from "@/lib/supabase/server";
-import type { SystemSettings, FeatureFlagId, KillSwitches, LocalizationSettings, EmailTemplate } from "@/lib/admin/types/system";
+import type { Database } from "@/lib/supabase/database.types";
+import type {
+  SystemSettings,
+  FeatureFlagId,
+  KillSwitches,
+  LocalizationSettings,
+  EmailTemplate,
+  SubscriptionContactPerson,
+} from "@/lib/admin/types/system";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -131,5 +139,62 @@ export async function updateEmailTemplateAction(template: EmailTemplate): Promis
     .eq("id", template.id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/email");
+  return { ok: true };
+}
+
+// ---- Subscription WhatsApp contacts (requires migration 014) ----
+// Same permission tier as the rest of Settings → Contact: settings.manage,
+// matching the "subscription_contacts: settings.manage can write" RLS
+// policy in 014_subscription_contacts.sql — this is the DB-level backstop,
+// requirePermission is just the earlier, friendlier rejection.
+export async function createSubscriptionContactAction(
+  input: Omit<SubscriptionContactPerson, "id">,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await requirePermission("settings", "manage");
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("subscription_contacts")
+    .insert({
+      name_ar: input.nameAr,
+      name_en: input.nameEn,
+      whatsapp: input.whatsapp,
+      active: input.active,
+      display_order: input.displayOrder,
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, error: error?.message ?? "INSERT_FAILED" };
+  revalidatePath("/admin/settings");
+  revalidatePath("/subscription");
+  return { ok: true, id: data.id };
+}
+
+export async function updateSubscriptionContactAction(
+  id: string,
+  patch: Partial<SubscriptionContactPerson>,
+): Promise<ActionResult> {
+  await requirePermission("settings", "manage");
+  const supabase = await createClient();
+  const update: Database["public"]["Tables"]["subscription_contacts"]["Update"] = {};
+  if (patch.nameAr !== undefined) update.name_ar = patch.nameAr;
+  if (patch.nameEn !== undefined) update.name_en = patch.nameEn;
+  if (patch.whatsapp !== undefined) update.whatsapp = patch.whatsapp;
+  if (patch.active !== undefined) update.active = patch.active;
+  if (patch.displayOrder !== undefined) update.display_order = patch.displayOrder;
+
+  const { error } = await supabase.from("subscription_contacts").update(update).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/settings");
+  revalidatePath("/subscription");
+  return { ok: true };
+}
+
+export async function deleteSubscriptionContactAction(id: string): Promise<ActionResult> {
+  await requirePermission("settings", "manage");
+  const supabase = await createClient();
+  const { error } = await supabase.from("subscription_contacts").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/settings");
+  revalidatePath("/subscription");
   return { ok: true };
 }
