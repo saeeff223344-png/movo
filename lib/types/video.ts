@@ -87,7 +87,7 @@ export type SceneTransition =
   | "light-sweep"
   | "spin";
 
-/** One beat of a generated video. Scenes compose into a ScenePlan the Remotion engine renders. */
+/** One beat of a generated video. */
 export type Scene = {
   id: string;
   type: SceneType;
@@ -97,13 +97,7 @@ export type Scene = {
   transition?: SceneTransition;
 };
 
-export type ScenePlan = {
-  id: string;
-  brief: VideoBrief;
-  scenes: Scene[];
-  createdAt: string;
-};
-
+/** Mirrors `public.projects.status`'s check constraint (004_projects_video_jobs.sql) exactly — used by ProjectCard/lib/dashboard/recent-activity.ts for the dashboard's real project/video cards. */
 export type ProjectStatus =
   | "draft"
   | "planning"
@@ -111,17 +105,6 @@ export type ProjectStatus =
   | "ready"
   | "rendering"
   | "failed";
-
-export type VideoProject = {
-  id: string;
-  title: string;
-  status: ProjectStatus;
-  aspectRatio: Exclude<AspectRatio, "auto">;
-  duration: number;
-  createdAt: string;
-  posterGradient: string;
-  scenePlan?: ScenePlan;
-};
 
 export type Revision = {
   id: string;

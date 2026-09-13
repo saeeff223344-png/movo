@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Clock, Play } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
-import type { ProjectStatus, VideoProject } from "@/lib/types/video";
+import type { ProjectStatus } from "@/lib/types/video";
+import type { DashboardProjectSummary } from "@/lib/dashboard/recent-activity";
 
 const STATUS_STYLES: Record<ProjectStatus, string> = {
   draft: "bg-surface-hover text-muted",
@@ -21,7 +22,7 @@ const STATUS_KEY: Record<ProjectStatus, string> = {
   failed: "dashboard.statusFailed",
 };
 
-export function ProjectCard({ project }: { project: VideoProject }) {
+export function ProjectCard({ project }: { project: DashboardProjectSummary }) {
   const { t } = useI18n();
 
   return (
