@@ -14,10 +14,12 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Run on every route except static files and Next.js internals, so the
-     * session cookie stays fresh everywhere — matches the official
-     * @supabase/ssr recommendation.
+     * Run on every route except static files, Next.js internals, and the
+     * robots.txt/sitemap.xml metadata routes, so the session cookie stays
+     * fresh everywhere — matches the official @supabase/ssr recommendation.
+     * robots.txt/sitemap.xml must stay reachable for crawlers without
+     * depending on a Supabase round-trip (see app/robots.ts, app/sitemap.ts).
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
