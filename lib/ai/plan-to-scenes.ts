@@ -5,7 +5,7 @@ import { AD_FPS, ASPECT_RATIO_DIMENSIONS } from "@/remotion/constants";
 import { secondsToFrames } from "@/lib/ai/scene-timing";
 import { LOCALE_DIR } from "@/lib/i18n/config";
 import { computeSceneVariants, resolveSceneTransitions } from "@/lib/ai/scene-variety";
-import { adaptSceneDurationsForNarration } from "@/lib/audio/scene-audio-sync";
+import { adaptSceneDurationsForNarration, type NarrationTrimsBySceneId } from "@/lib/audio/scene-audio-sync";
 import { buildPlanAudioProps } from "@/lib/audio/plan-audio";
 import { resolvePlanPalette } from "@/remotion/compositions/palette-resolution";
 import type { ResolvedSceneVisual } from "@/lib/visuals/types";
@@ -140,11 +140,18 @@ export function buildVideoPlanRenderData(
   assets: Asset[] = [],
   fps: number = AD_FPS,
   narrationAudioUrls: Readonly<Record<string, string>> = {},
-  narrationTrims: Readonly<Record<string, { trimStartSeconds: number; trimEndSeconds: number }>> = {},
+  narrationTrims: NarrationTrimsBySceneId = {},
   autoVisuals: Readonly<Record<string, ResolvedSceneVisual>> = {},
   aiVideos: Readonly<Record<string, ResolvedSceneVideo>> = {},
 ): VideoPlanRenderData {
-  const adaptedPlan = adaptSceneDurationsForNarration(plan);
+  // narrationTrims is passed here too (not just into buildPlanAudioProps
+  // below) so a scene's real, ElevenLabs-measured narration duration —
+  // whenever it's already known — sizes the scene itself, not just its
+  // voice track. Otherwise the scene's own (and thus its narration
+  // Sequence's) duration would still come from the pre-synthesis estimate,
+  // and a real clip longer than that estimate would still get cut off right
+  // at the transition into the next scene.
+  const adaptedPlan = adaptSceneDurationsForNarration(plan, narrationTrims);
   const scenes = buildVideoPlanScenes(adaptedPlan, assets, fps, autoVisuals, aiVideos);
   const durationInFrames = scenes.reduce((total, scene) => total + scene.durationInFrames, 0);
   const { width, height } = ASPECT_RATIO_DIMENSIONS[plan.aspectRatio];

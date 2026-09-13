@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPlanAudioProps } from "@/lib/audio/plan-audio";
-import { adaptSceneDurationsForNarration } from "@/lib/audio/scene-audio-sync";
+import { adaptSceneDurationsForNarration, computeSceneAudioTimings } from "@/lib/audio/scene-audio-sync";
+import { secondsToFrames } from "@/lib/ai/scene-timing";
 import type { VideoPlan } from "@/lib/ai/video-plan-schema";
 
 function scene(overrides: Partial<VideoPlan["scenes"][number]> = {}): VideoPlan["scenes"][number] {
@@ -145,5 +146,45 @@ describe("buildPlanAudioProps", () => {
     const p = plan();
     const urls = { s1: "url-1", s3: "url-3" };
     expect(buildPlanAudioProps(p, urls, 30)).toEqual(buildPlanAudioProps(p, urls, 30));
+  });
+
+  it("(chopping-bug regression) voice track duration comes from the real trim duration, not the smaller pre-synthesis estimate, when a trim exists", () => {
+    // "hi" estimates to well under a second; the real ElevenLabs-measured clip is 3s.
+    const trims = { s1: { trimStartSeconds: 0, trimEndSeconds: 3 } };
+    const before = plan({ scenes: [scene({ id: "s1", duration: 1, narration: "hi" })] });
+    const adapted = adaptSceneDurationsForNarration(before, trims);
+
+    const audio = buildPlanAudioProps(adapted, { s1: "shared-url" }, 30, trims);
+    const track = audio.voiceTracks[0];
+
+    expect(track.durationFrames).toBeGreaterThanOrEqual(secondsToFrames(3, 30));
+  });
+
+  it("(chopping-bug regression) no cutoff: the voice track's Sequence covers the entire real narration even when the estimate undershoots reality — mirrors the real production case (estimate 5.245s, real 5.944s)", () => {
+    const trims = { s1: { trimStartSeconds: 0, trimEndSeconds: 5.944 } };
+    const before = plan({
+      language: "ar",
+      scenes: [scene({ id: "s1", duration: 4, narration: "بتحتاج إعلان احترافي؟ دلوقتي تقدر تعمله في دقائق، من غير مصمم ومن غير تعقيد." })],
+    });
+    const adapted = adaptSceneDurationsForNarration(before, trims);
+
+    const audio = buildPlanAudioProps(adapted, { s1: "shared-url" }, 30, trims);
+    const track = audio.voiceTracks[0];
+
+    expect(track.durationFrames).toBeGreaterThanOrEqual(secondsToFrames(5.944, 30));
+    // endAt must still land exactly on the real trim end, in frames.
+    expect(track.trimEndFrames).toBe(Math.round(5.944 * 30));
+  });
+
+  it("no regression: without any narrationTrims, voice track duration still comes from the pre-synthesis estimate exactly as before", () => {
+    const p = plan();
+    const timings = computeSceneAudioTimings(p);
+    const s1Timing = timings.find((t) => t.sceneId === "s1")!;
+
+    const audio = buildPlanAudioProps(p, { s1: "url-1" }, 30);
+    const track = audio.voiceTracks.find((t) => t.src === "url-1")!;
+
+    const expectedFrames = Math.max(1, Math.min(secondsToFrames(s1Timing.narrationDuration, 30), secondsToFrames(timings[timings.length - 1].end, 30) - track.startFrame));
+    expect(track.durationFrames).toBe(expectedFrames);
   });
 });

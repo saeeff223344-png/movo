@@ -1,7 +1,7 @@
 import type { VideoPlan } from "@/lib/ai/video-plan-schema";
 import type { PlanCompositionAudioProps } from "@/remotion/compositions/plan-types";
 import { secondsToFrames } from "@/lib/ai/scene-timing";
-import { computeSceneAudioTimings } from "./scene-audio-sync";
+import { computeSceneAudioTimings, type NarrationTrimsBySceneId } from "./scene-audio-sync";
 import { resolveAudioSettings } from "./audio-settings";
 import { getMusicTrack } from "./music-catalog";
 import { DEFAULT_DUCKING_CONFIG } from "./music-ducking";
@@ -23,14 +23,21 @@ import { DEFAULT_DUCKING_CONFIG } from "./music-ducking";
  * like today's default. Ducking only ever activates for a scene that
  * actually has a URL here — there is nothing to duck the music for
  * otherwise.
+ *
+ * `narrationTrims` is threaded into computeSceneAudioTimings below too, so
+ * every timing this function derives (ducking intervals, lead-in, and the
+ * voice track's own Sequence length further down) is based on the same
+ * real, ElevenLabs-measured narration duration `plan` was already adapted
+ * with (see scene-audio-sync.ts's adaptSceneDurationsForNarration) — never
+ * a second, possibly-inconsistent recomputation of the estimate.
  */
 export function buildPlanAudioProps(
   plan: VideoPlan,
   narrationAudioUrls: Readonly<Record<string, string>>,
   fps: number,
-  narrationTrims: Readonly<Record<string, { trimStartSeconds: number; trimEndSeconds: number }>> = {},
+  narrationTrims: NarrationTrimsBySceneId = {},
 ): PlanCompositionAudioProps {
-  const timings = computeSceneAudioTimings(plan);
+  const timings = computeSceneAudioTimings(plan, narrationTrims);
   const totalFrames = timings.length > 0 ? secondsToFrames(timings[timings.length - 1].end, fps) : 0;
 
   const narrationIntervals = timings
@@ -44,8 +51,17 @@ export function buildPlanAudioProps(
     const src = narrationAudioUrls[t.sceneId];
     if (!t.hasNarration || !src) return [];
     const startFrame = secondsToFrames(t.start + t.narrationStart, fps);
-    const durationFrames = Math.max(1, Math.min(secondsToFrames(t.narrationDuration, fps), totalFrames - startFrame));
     const trim = narrationTrims[t.sceneId];
+    // The surrounding <Sequence> (PlanComposition.tsx) must stay mounted for
+    // the FULL real trimmed slice, never just the pre-synthesis estimate —
+    // otherwise Remotion unmounts the <Audio> element (and its endAt) before
+    // the real, longer clip finishes, chopping the sentence off mid-word
+    // right at the scene boundary. `t.narrationDuration` already reflects the
+    // real duration when `trim` came from the same map passed into
+    // computeSceneAudioTimings above, but computing it again directly from
+    // the trim here keeps this guarantee explicit and independently correct.
+    const sequenceDurationSeconds = trim ? Math.max(0, trim.trimEndSeconds - trim.trimStartSeconds) : t.narrationDuration;
+    const durationFrames = Math.max(1, Math.min(secondsToFrames(sequenceDurationSeconds, fps), totalFrames - startFrame));
     if (!trim) return [{ src, startFrame, durationFrames }];
     return [
       {

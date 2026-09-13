@@ -102,6 +102,23 @@ describe("computeSceneAudioTimings", () => {
     const arabicTiming = computeSceneAudioTimings(plan({ language: "ar", scenes: [scene({ id: "s1", duration: 10, narration: arabicText })] }))[0];
     expect(arabicTiming.narrationDuration).toBeGreaterThan(englishTiming.narrationDuration);
   });
+
+  it("(chopping-bug regression) uses the real trim duration, not the pre-synthesis estimate, when a narrationTrim is supplied", () => {
+    // "hi" estimates to well under a second; the real ElevenLabs-measured clip is 5s.
+    const p = plan({ scenes: [scene({ id: "s1", duration: 1, narration: "hi" })] });
+    const withoutTrim = computeSceneAudioTimings(p)[0];
+    const withTrim = computeSceneAudioTimings(p, { s1: { trimStartSeconds: 0, trimEndSeconds: 5 } })[0];
+
+    expect(withoutTrim.narrationDuration).toBeLessThan(1);
+    expect(withTrim.narrationDuration).toBe(5);
+  });
+
+  it("(chopping-bug regression) falls back to the pre-synthesis estimate for a scene missing from narrationTrims — no regression when no real trim exists yet", () => {
+    const p = plan();
+    expect(computeSceneAudioTimings(p, {})).toEqual(computeSceneAudioTimings(p));
+    // A trim for a different scene must not affect a scene that has none of its own.
+    expect(computeSceneAudioTimings(p, { s2: { trimStartSeconds: 0, trimEndSeconds: 100 } })[0]).toEqual(computeSceneAudioTimings(p)[0]);
+  });
 });
 
 describe("adaptSceneDurationsForNarration", () => {
@@ -149,5 +166,34 @@ describe("adaptSceneDurationsForNarration", () => {
   it("is deterministic for the same plan", () => {
     const p = plan({ scenes: [scene({ id: "s1", duration: 1, narration: "word ".repeat(60).trim() })] });
     expect(adaptSceneDurationsForNarration(p)).toEqual(adaptSceneDurationsForNarration(p));
+  });
+
+  it("(chopping-bug regression) expands the scene using the real trim duration when it exceeds both the original scene duration and the pre-synthesis estimate", () => {
+    // "hi" barely registers on the word-count estimate, but the real ElevenLabs clip is 6s —
+    // exactly the scenario found in production (short estimate, much longer real narration).
+    const before = plan({ scenes: [scene({ id: "s1", duration: 1, narration: "hi" })] });
+    const trims = { s1: { trimStartSeconds: 0, trimEndSeconds: 6 } };
+
+    const adaptedWithoutTrim = adaptSceneDurationsForNarration(before);
+    const adaptedWithTrim = adaptSceneDurationsForNarration(before, trims);
+
+    expect(adaptedWithoutTrim.scenes[0].duration).toBeLessThan(2);
+    expect(adaptedWithTrim.scenes[0].duration).toBeGreaterThan(adaptedWithoutTrim.scenes[0].duration);
+  });
+
+  it("(chopping-bug regression) never lets the scene be shorter than the real narration slice, so the transition into the next scene can never cut it off", () => {
+    const before = plan({ scenes: [scene({ id: "s1", duration: 1, narration: "hi" })] });
+    const trims = { s1: { trimStartSeconds: 0, trimEndSeconds: 6 } };
+    const after = adaptSceneDurationsForNarration(before, trims);
+    const timing = computeSceneAudioTimings(after, trims)[0];
+
+    expect(timing.duration).toBeGreaterThanOrEqual(6);
+    // And the real narration window itself is fully inside the scene's own [start, end).
+    expect(timing.start + timing.narrationEnd).toBeLessThanOrEqual(timing.end);
+  });
+
+  it("no regression: without any narrationTrims, adaptSceneDurationsForNarration behaves exactly as before", () => {
+    const before = plan({ scenes: [scene({ id: "s1", duration: 1, narration: "word ".repeat(60).trim() })] });
+    expect(adaptSceneDurationsForNarration(before, {})).toEqual(adaptSceneDurationsForNarration(before));
   });
 });
