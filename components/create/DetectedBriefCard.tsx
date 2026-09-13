@@ -4,14 +4,15 @@ import { Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
 import type { VideoBrief } from "@/lib/types/video";
 
-const PLATFORM_KEY: Record<VideoBrief["platform"], string> = {
+/** Also reused by ResultView.tsx — VideoPlan's platform/visualStyle share these same value sets. */
+export const PLATFORM_KEY: Record<VideoBrief["platform"], string> = {
   reels: "videoTypes.reels",
   tiktok: "videoTypes.tiktok",
   youtube: "videoTypes.youtube",
   general: "create.platformGeneral",
 };
 
-const STYLE_KEY: Record<VideoBrief["style"], string> = {
+export const STYLE_KEY: Record<VideoBrief["style"], string> = {
   fast: "create.styleFast",
   luxury: "create.styleLuxury",
   fun: "create.styleFun",

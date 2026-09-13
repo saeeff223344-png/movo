@@ -56,7 +56,36 @@ export type SceneType =
   | "app-screenshot"
   | "split-screen";
 
-export type SceneTransition = "cut" | "fade" | "slide" | "fast-cut" | "luxury-fade";
+/**
+ * Motion & Variety Engine (Phase 4): the original 5 plus a much richer,
+ * purpose/pacing-aware vocabulary the AI planner can pick from. Every
+ * value here needs a matching entry in
+ * remotion/compositions/scenes/transition-motion.ts's TRANSITION_RECIPES,
+ * enforced by a test — the renderer falls back to "fade" for anything
+ * missing or invalid rather than failing to render.
+ */
+export type SceneTransition =
+  | "cut"
+  | "fade"
+  | "slide"
+  | "fast-cut"
+  | "luxury-fade"
+  | "zoom-in"
+  | "zoom-out"
+  | "push-left"
+  | "push-right"
+  | "push-up"
+  | "push-down"
+  | "whip-left"
+  | "whip-right"
+  | "blur"
+  | "flash"
+  | "wipe"
+  | "scale-pop"
+  | "card-swap"
+  | "split-reveal"
+  | "light-sweep"
+  | "spin";
 
 /** One beat of a generated video. Scenes compose into a ScenePlan the Remotion engine renders. */
 export type Scene = {

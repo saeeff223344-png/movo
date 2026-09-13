@@ -2,6 +2,7 @@
 
 import { CalendarCheck, CalendarClock, Wallet } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
+import { formatDate } from "@/lib/admin/utils/format";
 import type { SubscriptionStatus } from "@/lib/types/account";
 
 export function StatusCard({ subscription }: { subscription: SubscriptionStatus }) {
@@ -35,7 +36,7 @@ export function StatusCard({ subscription }: { subscription: SubscriptionStatus 
           <div>
             <p className="text-xs text-muted">{t("subscription.startDate")}</p>
             <p className="text-sm font-semibold text-primary">
-              {subscription.startDate ?? t("common.placeholder")}
+              {subscription.startDate ? formatDate(subscription.startDate) : t("common.placeholder")}
             </p>
           </div>
         </div>
@@ -44,7 +45,7 @@ export function StatusCard({ subscription }: { subscription: SubscriptionStatus 
           <div>
             <p className="text-xs text-muted">{t("subscription.expiryDate")}</p>
             <p className="text-sm font-semibold text-primary">
-              {subscription.expiryDate ?? t("common.placeholder")}
+              {subscription.expiryDate ? formatDate(subscription.expiryDate) : t("common.placeholder")}
             </p>
           </div>
         </div>

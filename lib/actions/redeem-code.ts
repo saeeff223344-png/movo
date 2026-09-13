@@ -42,6 +42,10 @@ export async function redeemActivationCode(rawCode: string): Promise<RedeemCodeR
 
   revalidatePath("/subscription");
   revalidatePath("/dashboard");
+  // So a stale "trial blocked" /create render (its subscription/trial props
+  // are fetched once per server render) picks up the newly-active
+  // subscription on the next visit, without requiring a manual hard reload.
+  revalidatePath("/create");
 
   return {
     status: "valid",

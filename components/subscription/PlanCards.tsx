@@ -21,6 +21,13 @@ export function PlanCards({ activePlan, plans }: { activePlan: PlanId | null; pl
     { id: "yearly", icon: KeyRound, popular: true },
   ];
 
+  // Computed live from the same admin-configurable prices the cards
+  // themselves render — never a separate hardcoded "save X" figure that
+  // could drift from the real prices if they change in /admin/plans.
+  const monthlyPlan = plans?.find((p) => p.slug === "monthly") ?? null;
+  const yearlyPlan = plans?.find((p) => p.slug === "yearly") ?? null;
+  const annualSavingsIqd = monthlyPlan && yearlyPlan ? monthlyPlan.priceIqd * 12 - yearlyPlan.priceIqd : null;
+
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       {slots.map((slot) => {
@@ -59,6 +66,11 @@ export function PlanCards({ activePlan, plans }: { activePlan: PlanId | null; pl
             <p className="mt-5 text-sm font-semibold text-brand-400">
               {plan ? formatMoney(plan.priceIqd) : plans === null ? t("subscription.priceUnavailable") : t("subscription.planUnavailable")}
             </p>
+            {slot.id === "yearly" && annualSavingsIqd !== null && annualSavingsIqd > 0 && (
+              <p className="mt-1 text-xs font-semibold text-emerald-500">
+                {t("subscription.annualSavings").replace("{amount}", formatMoney(annualSavingsIqd))}
+              </p>
+            )}
           </div>
         );
       })}

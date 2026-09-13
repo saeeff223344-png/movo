@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
-import { GENERATION_STEP_KEYS } from "@/lib/mock/generation";
 
-const STEP_LABEL_KEY: Record<(typeof GENERATION_STEP_KEYS)[number], string> = {
+const STEP_KEYS = ["understandingIdea", "writingCopy", "buildingScenes", "choosingMotion", "preparingPreview"] as const;
+
+const STEP_LABEL_KEY: Record<(typeof STEP_KEYS)[number], string> = {
   understandingIdea: "create.genStepUnderstand",
   writingCopy: "create.genStepCopy",
   buildingScenes: "create.genStepScenes",
@@ -13,20 +14,25 @@ const STEP_LABEL_KEY: Record<(typeof GENERATION_STEP_KEYS)[number], string> = {
   preparingPreview: "create.genStepPreview",
 };
 
-const STEP_INTERVAL_MS = 550;
+const STEP_INTERVAL_MS = 900;
 
-export function GenerationProgress({ onDone }: { onDone: () => void }) {
+/**
+ * Purely presentational loading state for the real generateVideoPlanAction
+ * request (CreateWorkspace.tsx) — cycles through the step list while
+ * mounted and clamps at the last step (still spinning) rather than
+ * completing on its own timer. Only the real network response knows when
+ * generation is actually done, so this component never decides that
+ * itself; the parent unmounts it once the awaited action resolves.
+ */
+export function GenerationProgress() {
   const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    if (activeIndex >= GENERATION_STEP_KEYS.length) {
-      const timeout = window.setTimeout(onDone, 400);
-      return () => window.clearTimeout(timeout);
-    }
+    if (activeIndex >= STEP_KEYS.length - 1) return;
     const timeout = window.setTimeout(() => setActiveIndex((i) => i + 1), STEP_INTERVAL_MS);
     return () => window.clearTimeout(timeout);
-  }, [activeIndex, onDone]);
+  }, [activeIndex]);
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center py-20 text-center">
@@ -39,7 +45,7 @@ export function GenerationProgress({ onDone }: { onDone: () => void }) {
       <p className="mt-1 text-sm text-muted">{t("create.generatingDesc")}</p>
 
       <ul className="mt-8 w-full space-y-3 text-start">
-        {GENERATION_STEP_KEYS.map((key, i) => {
+        {STEP_KEYS.map((key, i) => {
           const done = i < activeIndex;
           const active = i === activeIndex;
           return (

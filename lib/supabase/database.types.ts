@@ -141,6 +141,8 @@ export type Database = {
         status: "draft" | "planning" | "generating" | "ready" | "rendering" | "failed";
         brief: Json | null;
         scene_plan: Json | null;
+        /** Per-scene narration audio metadata (durable storage paths only — never a signed URL or raw audio). See 016_projects_narration_audio.sql. */
+        narration: Json | null;
         created_at: string;
         updated_at: string;
       }>;
@@ -148,11 +150,13 @@ export type Database = {
         id: string;
         project_id: string;
         owner_id: string;
-        kind: "product" | "logo" | "reference" | "video";
+        kind: "product" | "logo" | "reference" | "video" | "auto-generated" | "ai-video";
         storage_path: string;
         mime_type: string | null;
         size_bytes: number | null;
         metadata: Json | null;
+        /** VideoPlan scene id this asset belongs to — set for auto-generated visuals (lib/visuals/*), null for a general user upload. See 018_project_assets_auto_generated.sql. */
+        scene_id: string | null;
         created_at: string;
       }>;
       project_revisions: Table<{
@@ -215,6 +219,8 @@ export type Database = {
         estimated_cost_iqd: number | null;
         error_message: string | null;
         server: string | null;
+        /** 0-1, see 017_render_jobs_export.sql. */
+        progress: number;
         created_at: string;
         completed_at: string | null;
       }>;

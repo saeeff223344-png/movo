@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowRight, Film, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/context";
+import { formatDate } from "@/lib/admin/utils/format";
 import type { SubscriptionStatus, TrialStatus } from "@/lib/types/account";
 
 export function StatusCards({ trial, subscription }: { trial: TrialStatus; subscription: SubscriptionStatus }) {
@@ -33,7 +34,9 @@ export function StatusCards({ trial, subscription }: { trial: TrialStatus; subsc
         </h3>
         <p className="mt-1 text-sm text-muted">
           {trial.used
-            ? t("dashboard.trialUsedDesc")
+            ? subscription.active
+              ? t("dashboard.trialUsedSubActiveDesc")
+              : t("dashboard.trialUsedDesc")
             : t("dashboard.trialAvailableDesc")}
         </p>
       </div>
@@ -60,7 +63,7 @@ export function StatusCards({ trial, subscription }: { trial: TrialStatus; subsc
         </h3>
         <p className="mt-1 text-sm text-muted">
           {subscription.active
-            ? `${t("dashboard.subExpiresOn")}: ${subscription.expiryDate}`
+            ? `${t("dashboard.subExpiresOn")}: ${formatDate(subscription.expiryDate)}`
             : t("dashboard.subInactiveDesc")}
         </p>
         <Link

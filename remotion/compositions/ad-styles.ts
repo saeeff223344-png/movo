@@ -1,5 +1,7 @@
 import type { AdStyle } from "./ad-types";
 
+export type BackgroundPattern = "grid" | "bokeh" | "lines" | "soft";
+
 export type AdPalette = {
   background: string;
   accent: string;
@@ -9,6 +11,24 @@ export type AdPalette = {
   badgeText: string;
   springStiffness: number;
   springDamping: number;
+  /**
+   * Everything below is additive — only PlanSceneBackground/PlanScene (the
+   * Phase 2 AI-plan preview) reads these. HookScene/OfferScene/PriceScene/
+   * CtaScene (the old Generate-video demo) only destructure the fields
+   * above, so extending this type never changes their rendered output.
+   */
+  glow: string;
+  secondaryAccent: string;
+  pattern: BackgroundPattern;
+  /**
+   * The two raw hex stops behind `background`'s CSS gradient string, set
+   * only by palette-resolution.ts's resolvePlanPalette when the palette came
+   * from brandColors or the AI's own per-plan choice — absent for the plain
+   * AD_PALETTES entries below (their gradients use 3 hand-tuned stops that
+   * don't reduce to a single pair). Lets resolveScenePalette re-angle the
+   * gradient per scene without re-deriving colors from the CSS string.
+   */
+  backgroundStops?: readonly [string, string];
 };
 
 export const AD_PALETTES: Record<AdStyle, AdPalette> = {
@@ -21,6 +41,9 @@ export const AD_PALETTES: Record<AdStyle, AdPalette> = {
     badgeText: "#0a0a13",
     springStiffness: 180,
     springDamping: 14,
+    glow: "#ff9a5a",
+    secondaryAccent: "#5b24e0",
+    pattern: "lines",
   },
   energetic: {
     background: "linear-gradient(160deg, #1b0f3a 0%, #6d3ff5 45%, #ff7a3d 100%)",
@@ -31,6 +54,9 @@ export const AD_PALETTES: Record<AdStyle, AdPalette> = {
     badgeText: "#1b0f3a",
     springStiffness: 220,
     springDamping: 12,
+    glow: "#ffd166",
+    secondaryAccent: "#ff5da2",
+    pattern: "bokeh",
   },
   luxury: {
     background: "linear-gradient(160deg, #05050a 0%, #1a1408 60%, #05050a 100%)",
@@ -41,6 +67,9 @@ export const AD_PALETTES: Record<AdStyle, AdPalette> = {
     badgeText: "#1a1408",
     springStiffness: 90,
     springDamping: 22,
+    glow: "#f3d99b",
+    secondaryAccent: "#8a6d3b",
+    pattern: "soft",
   },
   fun: {
     background: "linear-gradient(160deg, #2f1573 0%, #ff5da2 55%, #ff9a5a 100%)",
@@ -51,6 +80,9 @@ export const AD_PALETTES: Record<AdStyle, AdPalette> = {
     badgeText: "#4a1bb8",
     springStiffness: 200,
     springDamping: 10,
+    glow: "#ffe066",
+    secondaryAccent: "#5da2ff",
+    pattern: "bokeh",
   },
   tech: {
     background: "linear-gradient(160deg, #05050a 0%, #0f1c3a 55%, #0d3a4a 100%)",
@@ -61,6 +93,9 @@ export const AD_PALETTES: Record<AdStyle, AdPalette> = {
     badgeText: "#05050a",
     springStiffness: 150,
     springDamping: 16,
+    glow: "#4fd7ff",
+    secondaryAccent: "#6d3ff5",
+    pattern: "grid",
   },
   minimal: {
     background: "linear-gradient(160deg, #f6f6fb 0%, #ffffff 100%)",
@@ -71,5 +106,8 @@ export const AD_PALETTES: Record<AdStyle, AdPalette> = {
     badgeText: "#ffffff",
     springStiffness: 120,
     springDamping: 18,
+    glow: "#5b24e0",
+    secondaryAccent: "#0a0a13",
+    pattern: "soft",
   },
 };

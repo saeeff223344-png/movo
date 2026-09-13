@@ -47,12 +47,14 @@ export function SubscriptionView({
         <p className="mt-1 text-sm text-secondary">{t("subscription.subtitle")}</p>
       </div>
 
-      <div className="flex items-start gap-3 rounded-2xl border border-brand-500/25 bg-brand-500/5 p-4 text-sm leading-relaxed text-secondary">
-        <Info className="mt-0.5 size-4 shrink-0 text-brand-400" />
-        <p>
-          {trialUsed ? t("subscription.noFreePlanTrialUsed") : t("subscription.noFreePlanNotice")}
-        </p>
-      </div>
+      {!subscription.active && (
+        <div className="flex items-start gap-3 rounded-2xl border border-brand-500/25 bg-brand-500/5 p-4 text-sm leading-relaxed text-secondary">
+          <Info className="mt-0.5 size-4 shrink-0 text-brand-400" />
+          <p>
+            {trialUsed ? t("subscription.noFreePlanTrialUsed") : t("subscription.noFreePlanNotice")}
+          </p>
+        </div>
+      )}
 
       <StatusCard subscription={subscription} />
       <PlanCards activePlan={subscription.plan} plans={plans} />
