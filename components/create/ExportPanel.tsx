@@ -5,12 +5,13 @@ import { Download, Lock, Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
 import { checkExportProgressAction, type StartExportResult } from "@/lib/actions/export-actions";
+import { DownloadVideoButton } from "@/components/create/DownloadVideoButton";
 
 type ExportUiState =
   | { phase: "idle" }
   | { phase: "starting" }
   | { phase: "rendering"; progress: number }
-  | { phase: "completed"; downloadUrl: string }
+  | { phase: "completed"; downloadUrl: string; renderJobId: string }
   | { phase: "failed"; error: string };
 
 const POLL_INTERVAL_MS = 3000;
@@ -44,7 +45,7 @@ export function ExportPanel({ projectId, onExport }: { projectId: string | null;
         return;
       }
       if (result.status === "succeeded") {
-        setState({ phase: "completed", downloadUrl: result.downloadUrl });
+        setState({ phase: "completed", downloadUrl: result.downloadUrl, renderJobId: activeJobId as string });
         setActiveJobId(null);
         return;
       }
@@ -103,10 +104,7 @@ export function ExportPanel({ projectId, onExport }: { projectId: string | null;
       {!projectId && state.phase === "idle" && <p className="mt-3 text-xs text-muted">{t("create.exportNeedsProject")}</p>}
 
       {state.phase === "completed" ? (
-        <Button className="mt-4 w-full" href={state.downloadUrl}>
-          <Download className="size-4" />
-          {t("create.exportDownloadButton")}
-        </Button>
+        <DownloadVideoButton downloadUrl={state.downloadUrl} renderJobId={state.renderJobId} projectId={projectId} />
       ) : (
         <Button className="mt-4 w-full" onClick={handleExport} disabled={!projectId || isActive}>
           {isActive ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}

@@ -410,7 +410,10 @@ export const en: Dictionary = {
     exportModalDesc: "Actual export will become available once the render engine is connected in the next phase.",
     exportStarting: "Starting export...",
     exportRendering: "Rendering... {progress}%",
-    exportDownloadButton: "Download MP4",
+    exportDownloadButton: "Download video",
+    exportDownloadPreparing: "Preparing your video...",
+    exportDownloadHint: "On iPhone: a share sheet will open — choose \"Save Video\" to save it to Photos, or \"Save to Files\".",
+    exportDownloadError: "Couldn't download the video. Please try again.",
     exportNeedsProject: "Save your project first to enable export.",
 
     trialBlockedTitle: "Your trial video has been used",

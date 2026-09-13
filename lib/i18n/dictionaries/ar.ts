@@ -408,7 +408,10 @@ export const ar = {
     exportModalDesc: "سيصبح التصدير الفعلي متاحًا بعد ربط محرك الرندر في المرحلة التالية.",
     exportStarting: "جارٍ بدء التصدير...",
     exportRendering: "جارٍ الرندر... {progress}%",
-    exportDownloadButton: "تنزيل MP4",
+    exportDownloadButton: "تحميل الفيديو",
+    exportDownloadPreparing: "جارٍ تجهيز الفيديو...",
+    exportDownloadHint: "على آيفون: ستظهر قائمة المشاركة، اختر «حفظ الفيديو» لحفظه في مكتبة الصور أو «حفظ في الملفات».",
+    exportDownloadError: "تعذّر تحميل الفيديو. حاول مرة أخرى.",
     exportNeedsProject: "احفظ مشروعك أولًا لتتمكن من التصدير.",
 
     trialBlockedTitle: "تم استخدام فيديوك التجريبي",
