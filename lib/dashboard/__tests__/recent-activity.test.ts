@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  buildOpenProjectHref,
   deriveProjectTitle,
   loadRecentProjects,
   loadRecentReadyVideos,
@@ -94,6 +95,12 @@ describe("mapProjectRowToSummary", () => {
     const b = mapProjectRowToSummary(projectRow());
     expect(a.posterGradient).toBe(b.posterGradient);
   });
+
+  it("(open-project routing) projectId equals the row's own id — a RecentProjects card's id IS the project", () => {
+    const summary = mapProjectRowToSummary(projectRow({ id: "p-123" }));
+    expect(summary.projectId).toBe("p-123");
+    expect(summary.projectId).toBe(summary.id);
+  });
 });
 
 describe("mapVideoRowToSummary", () => {
@@ -112,6 +119,19 @@ describe("mapVideoRowToSummary", () => {
   it("falls back to a generic title when the owning project can't be found, without throwing", () => {
     expect(() => mapVideoRowToSummary(videoRow(), null)).not.toThrow();
     expect(mapVideoRowToSummary(videoRow(), null).title).toBe("مشروع بدون عنوان");
+  });
+
+  it("(open-project routing bug regression) projectId is the OWNING project's id (video.project_id), never the video row's own id", () => {
+    const summary = mapVideoRowToSummary(videoRow({ id: "video-999", project_id: "project-111" }), null);
+    expect(summary.id).toBe("video-999");
+    expect(summary.projectId).toBe("project-111");
+    expect(summary.projectId).not.toBe(summary.id);
+  });
+});
+
+describe("buildOpenProjectHref", () => {
+  it("(/create?project=<id> link shape) builds the exact query param CreateWorkspace.tsx's restore flow reads", () => {
+    expect(buildOpenProjectHref("11111111-1111-1111-1111-111111111111")).toBe("/create?project=11111111-1111-1111-1111-111111111111");
   });
 });
 

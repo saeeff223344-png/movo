@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Clock, Play } from "lucide-react";
 import { useI18n } from "@/lib/i18n/context";
 import type { ProjectStatus } from "@/lib/types/video";
-import type { DashboardProjectSummary } from "@/lib/dashboard/recent-activity";
+import { buildOpenProjectHref, type DashboardProjectSummary } from "@/lib/dashboard/recent-activity";
 
 const STATUS_STYLES: Record<ProjectStatus, string> = {
   draft: "bg-surface-hover text-muted",
@@ -51,7 +51,7 @@ export function ProjectCard({ project }: { project: DashboardProjectSummary }) {
           <span>{project.createdAt}</span>
         </div>
         <Link
-          href="/create"
+          href={buildOpenProjectHref(project.projectId)}
           className="mt-3 inline-block text-xs font-bold text-brand-400 hover:text-brand-300"
         >
           {t("dashboard.openProject")}

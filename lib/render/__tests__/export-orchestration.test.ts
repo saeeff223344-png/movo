@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { startExport, checkExportProgress, type VideosClient, type RenderJobsClient, type VideoRow, type RenderJobRow } from "@/lib/render/export-orchestration";
+import {
+  startExport,
+  checkExportProgress,
+  findLatestCompletedExport,
+  type VideosClient,
+  type RenderJobsClient,
+  type VideoRow,
+  type RenderJobRow,
+  type LatestExportVideosClient,
+  type LatestExportRenderJobsClient,
+} from "@/lib/render/export-orchestration";
 import { saveGeneratedProject, saveProjectNarration, type ProjectsClient, type ProjectRow, type ProjectAssetsClient, type PersistedVideoAssetRow } from "@/lib/actions/project-persistence";
 import type { EntitlementClient } from "@/lib/supabase/usage";
 import type { RenderClient, StartRenderInput, StartRenderResult, RenderProgressResult } from "@/lib/render/render-client";
@@ -608,5 +618,105 @@ describe("checkExportProgress", () => {
     if (first.ok && first.status === "succeeded" && second.ok && second.status === "succeeded") {
       expect(first.downloadUrl).not.toBe(second.downloadUrl);
     }
+  });
+});
+
+/**
+ * Pre-launch fix: ExportPanel.tsx checks this on mount/projectId-change so
+ * reopening/reloading a project that was already exported shows "تحميل
+ * الفيديو" immediately instead of risking a duplicate, paid re-export.
+ * `findLatestCompletedExport`'s own input type has no RenderClient at all —
+ * it is structurally impossible for this function to start a render;
+ * these tests additionally prove it never even calls a write/insert method
+ * on the fakes it's given, only the two read lookups plus a signed-URL
+ * reissue.
+ */
+describe("findLatestCompletedExport", () => {
+  function fakeLatestExportVideos(video: { id: string; storage_path: string | null } | null): LatestExportVideosClient {
+    return { selectLatestReadyVideoForProject: vi.fn().mockResolvedValue(video) };
+  }
+  function fakeLatestExportRenderJobs(job: { id: string } | null): LatestExportRenderJobsClient {
+    return { selectSucceededRenderJobForVideo: vi.fn().mockResolvedValue(job) };
+  }
+
+  it("(existing completed export rehydrates) returns a fresh signed download URL and the render job id when a ready video and its succeeded render job both exist", async () => {
+    const videos = fakeLatestExportVideos({ id: "video-1", storage_path: "owner-1/project-1/job-1.mp4" });
+    const renderJobs = fakeLatestExportRenderJobs({ id: "job-1" });
+
+    const result = await findLatestCompletedExport({
+      videos,
+      renderJobs,
+      storage: fakeNarrationStorage(),
+      ownerId: OWNER_A,
+      projectId: "project-1",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      found: true,
+      downloadUrl: "https://storage.example/narration-signed/owner-1/project-1/job-1.mp4",
+      renderJobId: "job-1",
+    });
+  });
+
+  it("(no existing export keeps ExportPanel idle) returns found:false when the project has no ready video at all", async () => {
+    const videos = fakeLatestExportVideos(null);
+    const renderJobs = fakeLatestExportRenderJobs({ id: "job-1" });
+
+    const result = await findLatestCompletedExport({ videos, renderJobs, storage: fakeNarrationStorage(), ownerId: OWNER_A, projectId: "project-1" });
+
+    expect(result).toEqual({ ok: true, found: false });
+    expect(renderJobs.selectSucceededRenderJobForVideo).not.toHaveBeenCalled();
+  });
+
+  it("(no existing export keeps ExportPanel idle) returns found:false when a ready video exists but has no storage_path yet", async () => {
+    const videos = fakeLatestExportVideos({ id: "video-1", storage_path: null });
+    const renderJobs = fakeLatestExportRenderJobs({ id: "job-1" });
+
+    const result = await findLatestCompletedExport({ videos, renderJobs, storage: fakeNarrationStorage(), ownerId: OWNER_A, projectId: "project-1" });
+
+    expect(result).toEqual({ ok: true, found: false });
+  });
+
+  it("(no existing export keeps ExportPanel idle) returns found:false when a ready video exists but no succeeded render job can be found for it", async () => {
+    const videos = fakeLatestExportVideos({ id: "video-1", storage_path: "owner-1/project-1/job-1.mp4" });
+    const renderJobs = fakeLatestExportRenderJobs(null);
+
+    const result = await findLatestCompletedExport({ videos, renderJobs, storage: fakeNarrationStorage(), ownerId: OWNER_A, projectId: "project-1" });
+
+    expect(result).toEqual({ ok: true, found: false });
+  });
+
+  it("(does not start a new render) calls only the two read lookups and a signed-URL reissue — never a write/insert on either fake client", async () => {
+    const videos = fakeLatestExportVideos({ id: "video-1", storage_path: "owner-1/project-1/job-1.mp4" });
+    const renderJobs = fakeLatestExportRenderJobs({ id: "job-1" });
+    const upload = vi.fn();
+    const storage = { from: () => ({ upload, createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://storage.example/${path}` }, error: null }) }) };
+
+    await findLatestCompletedExport({ videos, renderJobs, storage, ownerId: OWNER_A, projectId: "project-1" });
+
+    expect(videos.selectLatestReadyVideoForProject).toHaveBeenCalledTimes(1);
+    expect(renderJobs.selectSucceededRenderJobForVideo).toHaveBeenCalledTimes(1);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("(current-user scoping is preserved) scopes both the video and render job lookups to the exact ownerId and projectId passed in", async () => {
+    const videos = fakeLatestExportVideos({ id: "video-1", storage_path: "path.mp4" });
+    const renderJobs = fakeLatestExportRenderJobs({ id: "job-1" });
+
+    await findLatestCompletedExport({ videos, renderJobs, storage: fakeNarrationStorage(), ownerId: "the-current-users-id", projectId: "the-project-id" });
+
+    expect(videos.selectLatestReadyVideoForProject).toHaveBeenCalledWith("the-project-id", "the-current-users-id");
+    expect(renderJobs.selectSucceededRenderJobForVideo).toHaveBeenCalledWith("video-1", "the-current-users-id");
+  });
+
+  it("surfaces a signing failure as ok:false rather than a fabricated URL", async () => {
+    const videos = fakeLatestExportVideos({ id: "video-1", storage_path: "path.mp4" });
+    const renderJobs = fakeLatestExportRenderJobs({ id: "job-1" });
+    const storage = { from: () => ({ upload: vi.fn(), createSignedUrl: async () => ({ data: null, error: { message: "Storage is unavailable." } }) }) };
+
+    const result = await findLatestCompletedExport({ videos, renderJobs, storage, ownerId: OWNER_A, projectId: "project-1" });
+
+    expect(result).toEqual({ ok: false, error: "Storage is unavailable." });
   });
 });

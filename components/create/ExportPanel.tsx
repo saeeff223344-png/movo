@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Download, Lock, Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useI18n } from "@/lib/i18n/context";
-import { checkExportProgressAction, type StartExportResult } from "@/lib/actions/export-actions";
+import { checkExportProgressAction, getLatestCompletedExportAction, type StartExportResult } from "@/lib/actions/export-actions";
 import { DownloadVideoButton } from "@/components/create/DownloadVideoButton";
 
 type ExportUiState =
@@ -64,6 +64,30 @@ export function ExportPanel({ projectId, onExport }: { projectId: string | null;
       window.clearInterval(interval);
     };
   }, [activeJobId]);
+
+  // Reopening/reloading a project that was already exported before: check
+  // once whether a real, completed export already exists so the user sees
+  // "تحميل الفيديو" immediately instead of "تصدير 1080p MP4" — which would
+  // risk starting a brand-new, paid Remotion Lambda render of something
+  // that already exists (startExport's "already exporting" guard only
+  // blocks a *concurrent* queued/processing job, not a duplicate of an
+  // already-succeeded one). The functional setState guards against a race
+  // with a fresh export the user explicitly starts in the same window:
+  // this only ever applies to a still-"idle" panel, never clobbering
+  // "starting"/"rendering"/"completed"/"failed".
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+
+    getLatestCompletedExportAction(projectId).then((result) => {
+      if (cancelled || !result.ok || !result.found) return;
+      setState((prev) => (prev.phase === "idle" ? { phase: "completed", downloadUrl: result.downloadUrl, renderJobId: result.renderJobId } : prev));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   const isActive = state.phase === "starting" || state.phase === "rendering";
 

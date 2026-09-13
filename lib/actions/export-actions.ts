@@ -7,6 +7,7 @@ import { RemotionLambdaRenderClient } from "@/lib/render/remotion-lambda-client"
 import {
   startExport,
   checkExportProgress,
+  findLatestCompletedExport,
   type VideosClient,
   type RenderJobsClient,
   type NewVideoRow,
@@ -15,9 +16,10 @@ import {
   type RenderJobRow,
   type StartExportResult,
   type CheckExportProgressResult,
+  type FindLatestCompletedExportResult,
 } from "@/lib/render/export-orchestration";
 
-export type { StartExportResult, CheckExportProgressResult } from "@/lib/render/export-orchestration";
+export type { StartExportResult, CheckExportProgressResult, FindLatestCompletedExportResult } from "@/lib/render/export-orchestration";
 
 /**
  * Thin "use server" wrappers around lib/render/export-orchestration.ts's
@@ -134,5 +136,56 @@ export async function checkExportProgressAction(renderJobId: string): Promise<Ch
     downloadFile,
     ownerId: user.id,
     renderJobId,
+  });
+}
+
+/**
+ * Checked on mount/projectId-change by ExportPanel.tsx so reopening a
+ * project that already has a completed export shows "تحميل الفيديو"
+ * immediately instead of offering (and risking a duplicate, paid) new
+ * export. Uses the same authenticated, RLS-scoped client every other real
+ * query in this app uses (never service-role) — every query below is
+ * explicitly scoped to the caller's own `owner_id`/`user_id`, matching
+ * lib/render/export-orchestration.ts's LatestExportVideosClient/
+ * LatestExportRenderJobsClient contracts. Never starts a Remotion Lambda
+ * render and never calls RemotionLambdaRenderClient at all — this is a
+ * pure lookup (two SELECTs + a Storage signed-URL reissue).
+ */
+export async function getLatestCompletedExportAction(projectId: string): Promise<FindLatestCompletedExportResult> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  return findLatestCompletedExport({
+    videos: {
+      async selectLatestReadyVideoForProject(pid, ownerId) {
+        const { data } = await supabase
+          .from("videos")
+          .select("id, storage_path")
+          .eq("project_id", pid)
+          .eq("owner_id", ownerId)
+          .eq("status", "ready")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return data;
+      },
+    },
+    renderJobs: {
+      async selectSucceededRenderJobForVideo(videoId, ownerId) {
+        const { data } = await supabase
+          .from("render_jobs")
+          .select("id")
+          .eq("video_id", videoId)
+          .eq("user_id", ownerId)
+          .eq("status", "succeeded")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return data;
+      },
+    },
+    storage: supabase.storage,
+    ownerId: user.id,
+    projectId,
   });
 }

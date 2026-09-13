@@ -12,9 +12,23 @@ import type { AspectRatio, ProjectStatus } from "@/lib/types/video";
  * project-actions.ts.
  */
 
-/** The one shape both RecentProjects and RecentVideos render via ProjectCard — a project card and a "real exported video" card are visually identical, just sourced from two different tables. */
+/**
+ * The one shape both RecentProjects and RecentVideos render via ProjectCard
+ * — a project card and a "real exported video" card are visually identical,
+ * just sourced from two different tables.
+ *
+ * `id` vs `projectId`: for a RecentProjects card these are the same value
+ * (the row IS the project), but for a RecentVideos card `id` is the
+ * `videos` row's own id (needed as a stable React key and, once
+ * ExportPanel checks for an existing export, as that video's identity) while
+ * `projectId` is the OWNING project's id — the one "فتح المشروع" must
+ * navigate with. Conflating the two would send a "recent video" click to
+ * `/create?project=<video id>`, which no project has, and restoring would
+ * fail.
+ */
 export type DashboardProjectSummary = {
   id: string;
+  projectId: string;
   title: string;
   status: ProjectStatus;
   aspectRatio: Exclude<AspectRatio, "auto">;
@@ -50,6 +64,20 @@ export type ProjectTitleSource = {
   business_name: string | null;
   scene_plan: unknown;
 };
+
+/**
+ * The exact "فتح المشروع" link shape ProjectCard.tsx uses — reuses
+ * CreateWorkspace.tsx's existing `?project=<id>` restore mechanism (see its
+ * own docstring: presence of this param loads the saved plan/narration/
+ * visuals/videos and jumps straight to the result stage, never triggering a
+ * new AI generation), never a new route. Extracted into its own function
+ * purely so the link shape is unit-testable without rendering ProjectCard
+ * (this project's vitest config has no jsdom/tsx render setup — see
+ * components/remotion/plan-preview-player-config.ts for the same pattern).
+ */
+export function buildOpenProjectHref(projectId: string): string {
+  return `/create?project=${projectId}`;
+}
 
 const DEFAULT_ASPECT_RATIO: Exclude<AspectRatio, "auto"> = "9:16";
 const FALLBACK_TITLE = "مشروع بدون عنوان";
@@ -111,6 +139,7 @@ export function deriveProjectTitle(source: ProjectTitleSource): string {
 export function mapProjectRowToSummary(row: ProjectSummaryRow): DashboardProjectSummary {
   return {
     id: row.id,
+    projectId: row.id,
     title: deriveProjectTitle(row),
     status: row.status,
     aspectRatio: normalizeAspectRatio(row.aspect_ratio),
@@ -133,6 +162,7 @@ export function mapProjectRowToSummary(row: ProjectSummaryRow): DashboardProject
 export function mapVideoRowToSummary(video: VideoSummaryRow, titleSource: ProjectTitleSource | null): DashboardProjectSummary {
   return {
     id: video.id,
+    projectId: video.project_id,
     title: titleSource ? deriveProjectTitle(titleSource) : FALLBACK_TITLE,
     status: "ready",
     aspectRatio: normalizeAspectRatio(video.aspect_ratio),

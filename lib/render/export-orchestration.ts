@@ -290,3 +290,57 @@ async function failJob(input: CheckExportProgressInput, job: RenderJobRow, messa
   });
   if (job.video_id) await input.videos.updateVideo(job.video_id, input.ownerId, { status: "failed" });
 }
+
+/** The minimal `videos` lookup findLatestCompletedExport needs — distinct from VideosClient above (which is keyed by video id, not project id). */
+export type LatestExportVideosClient = {
+  /** The current owner's most recent `status = 'ready'` video for this project, or null if none exists. Must be scoped to `ownerId` (defense-in-depth alongside RLS — "videos: owner can read own", auth.uid() = owner_id). */
+  selectLatestReadyVideoForProject(projectId: string, ownerId: string): Promise<{ id: string; storage_path: string | null } | null>;
+};
+
+/** The minimal `render_jobs` lookup findLatestCompletedExport needs — distinct from RenderJobsClient above (keyed by video id, not render job id). */
+export type LatestExportRenderJobsClient = {
+  /** The current owner's most recent `status = 'succeeded'` render job for this video, or null if none exists (should not normally happen for a "ready" video, but a video/job pair is never assumed to exist). Must be scoped to `ownerId`. */
+  selectSucceededRenderJobForVideo(videoId: string, ownerId: string): Promise<{ id: string } | null>;
+};
+
+export type FindLatestCompletedExportInput = {
+  videos: LatestExportVideosClient;
+  renderJobs: LatestExportRenderJobsClient;
+  storage: NarrationStorageClient;
+  ownerId: string;
+  projectId: string;
+};
+
+export type FindLatestCompletedExportResult =
+  | { ok: true; found: true; downloadUrl: string; renderJobId: string }
+  | { ok: true; found: false }
+  | { ok: false; error: string };
+
+/**
+ * Looks up whether this project already has a real, completed export —
+ * used on reopening/reloading a project (ExportPanel.tsx) so a user who
+ * already exported never sees "start a new export" and is never tempted
+ * into paying for a duplicate Remotion Lambda render of something that
+ * already exists. Purely a lookup: never inserts/updates a video or
+ * render_jobs row, never calls a render backend, never calls any paid API
+ * — the two SELECTs plus a Storage signed-URL reissue (the exact same
+ * signFinalVideoPath checkExportProgress already uses for its "succeeded"
+ * branch above) are the only work done here.
+ *
+ * `found: false` (not an error) covers both "no export was ever started"
+ * and "a video exists but its render job can't be found" — either way,
+ * ExportPanel's correct response is the same: show the normal start-export
+ * button, never block on it.
+ */
+export async function findLatestCompletedExport(input: FindLatestCompletedExportInput): Promise<FindLatestCompletedExportResult> {
+  const video = await input.videos.selectLatestReadyVideoForProject(input.projectId, input.ownerId);
+  if (!video || !video.storage_path) return { ok: true, found: false };
+
+  const renderJob = await input.renderJobs.selectSucceededRenderJobForVideo(video.id, input.ownerId);
+  if (!renderJob) return { ok: true, found: false };
+
+  const signed = await signFinalVideoPath(input.storage, video.storage_path);
+  if (!signed.ok) return { ok: false, error: signed.error };
+
+  return { ok: true, found: true, downloadUrl: signed.signedUrl, renderJobId: renderJob.id };
+}
