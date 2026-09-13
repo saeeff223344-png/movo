@@ -3,11 +3,18 @@
 import { Player } from "@remotion/player";
 import { PlanComposition } from "@/remotion/compositions/PlanComposition";
 import type { VideoPlanRenderData } from "@/lib/ai/plan-to-scenes";
+import { PLAN_PREVIEW_PLAYER_AUDIO_CONFIG } from "./plan-preview-player-config";
 
 /**
  * Plays a real AI VideoPlan (see lib/ai/plan-to-scenes.ts) — mirrors
  * AdPreviewPlayer.tsx's setup, sized dynamically instead of fixed to the
  * 9:16 demo.
+ *
+ * Audio: see plan-preview-player-config.ts's docstring — starts muted on
+ * purpose (never relies on the browser allowing unmuted autoplay, which
+ * @remotion/player silently falls back to muted-with-no-app-visible-signal
+ * when blocked) and always shows the volume control so the user has an
+ * obvious, one-click way to turn the real ElevenLabs narration on.
  *
  * Sizing: pass ONLY `width` in `style`, never `height` too. @remotion/player
  * special-cases this (see calculatePlayerSize in
@@ -45,11 +52,9 @@ export function PlanPreviewPlayer({ data, className = "" }: { data: VideoPlanRen
       compositionHeight={data.height}
       style={{ width: "100%", direction: "ltr" }}
       className={className}
-      autoPlay
       loop
       controls
-      clickToPlay={false}
-      showVolumeControls={false}
+      {...PLAN_PREVIEW_PLAYER_AUDIO_CONFIG}
     />
   );
 }
