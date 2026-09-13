@@ -18,8 +18,17 @@ import type { RenderClient, StartRenderInput, StartRenderResult, RenderProgressR
  * generated or guessed on your behalf):
  *   1. An AWS account + an IAM user with the permissions
  *      `npx remotion lambda policies` documents.
- *   2. `npx remotion lambda functions deploy` — deploys the Lambda function
- *      that actually renders.
+ *   2. `npx remotion lambda functions deploy --timeout=900` — deploys the
+ *      Lambda function that actually renders. Always pass `--timeout=900`
+ *      explicitly (never the 120s default) — 900 seconds is both AWS
+ *      Lambda's own absolute platform maximum and
+ *      @remotion/lambda-client's own MAX_TIMEOUT constant, confirmed in
+ *      the installed package. A real production export was seen reaching
+ *      87.5% progress before an 800-second function timed it out — see
+ *      .env.example's REMOTION_LAMBDA_FUNCTION_NAME comment for the full
+ *      story. Remotion Lambda functions are immutable per config, so a
+ *      shorter timeout can never be "upgraded" later — it always deploys a
+ *      new, differently-named function.
  *   3. `npx remotion lambda sites create` — bundles and uploads this
  *      Remotion project to S3, producing a `serveUrl`.
  *   4. Set these in `.env.local` (see .env.example):

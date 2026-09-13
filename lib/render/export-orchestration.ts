@@ -75,6 +75,19 @@ export type RenderJobRow = {
   error_message: string | null;
 };
 
+/**
+ * `ok: false` here means the SELECT itself failed (network/PostgREST/DB
+ * error) — genuinely unknown whether the row exists. `ok: true, job: null`
+ * means the query succeeded and the row genuinely doesn't exist (or exists
+ * under a different owner — the two are indistinguishable to a caller by
+ * design). Collapsing these two into a single `null` (the pre-fix shape)
+ * was the production bug: a transient query failure during a long poll
+ * loop looked identical to "this render job was never created," which
+ * made ExportPanel hard-fail and permanently stop tracking a render that
+ * was often still genuinely running in AWS.
+ */
+export type SelectRenderJobResult = { ok: true; job: RenderJobRow | null } | { ok: false; error: string };
+
 export type RenderJobsClient = {
   insertRenderJob(row: NewRenderJobRow): Promise<{ ok: true; id: string } | { ok: false; error: string }>;
   updateRenderJob(
@@ -82,8 +95,7 @@ export type RenderJobsClient = {
     ownerId: string,
     patch: Partial<Pick<RenderJobRow, "status" | "progress" | "error_message">> & { completed_at?: string },
   ): Promise<{ ok: true } | { ok: false; error: string }>;
-  /** Returns null both when the job doesn't exist AND when it exists but belongs to a different owner. */
-  selectRenderJob(id: string, ownerId: string): Promise<RenderJobRow | null>;
+  selectRenderJob(id: string, ownerId: string): Promise<SelectRenderJobResult>;
   /** True when the owner already has a queued/processing job for this project — used to refuse starting a duplicate concurrent export. */
   hasActiveJobForProject(ownerId: string, projectId: string): Promise<boolean>;
 };
@@ -193,7 +205,17 @@ export type CheckExportProgressResult =
   | { ok: true; status: "queued" | "processing"; progress: number }
   | { ok: true; status: "succeeded"; downloadUrl: string }
   | { ok: true; status: "failed"; error: string }
-  | { ok: false; error: string };
+  /**
+   * `transient: true` means this poll attempt itself failed to read the
+   * render_jobs row (a query/network error) — the render's real status is
+   * simply unknown for this one attempt, not confirmed missing. The caller
+   * (ExportPanel) should retry rather than treat this as a real failure.
+   * `transient: false` covers every other `ok: false` case here — a
+   * genuinely missing render job, or a real data-integrity problem (e.g. a
+   * succeeded job missing its video reference) — none of which a retry
+   * could ever fix.
+   */
+  | { ok: false; error: string; transient: boolean };
 
 /**
  * Polled by the client UI (ResultView's ExportPanel) every few seconds —
@@ -205,15 +227,17 @@ export type CheckExportProgressResult =
  * Storage (Requirement 12).
  */
 export async function checkExportProgress(input: CheckExportProgressInput): Promise<CheckExportProgressResult> {
-  const job = await input.renderJobs.selectRenderJob(input.renderJobId, input.ownerId);
-  if (!job) return { ok: false, error: "Render job not found." };
+  const jobLookup = await input.renderJobs.selectRenderJob(input.renderJobId, input.ownerId);
+  if (!jobLookup.ok) return { ok: false, error: jobLookup.error, transient: true };
+  const job = jobLookup.job;
+  if (!job) return { ok: false, error: "Render job not found.", transient: false };
 
   if (job.status === "succeeded") {
-    if (!job.video_id) return { ok: false, error: "Render job is missing its video reference." };
+    if (!job.video_id) return { ok: false, error: "Render job is missing its video reference.", transient: false };
     const video = await input.videos.selectVideo(job.video_id, input.ownerId);
-    if (!video?.storage_path) return { ok: false, error: "Rendered video record is missing its storage path." };
+    if (!video?.storage_path) return { ok: false, error: "Rendered video record is missing its storage path.", transient: false };
     const signed = await signFinalVideoPath(input.storage, video.storage_path);
-    if (!signed.ok) return { ok: false, error: signed.error };
+    if (!signed.ok) return { ok: false, error: signed.error, transient: false };
     return { ok: true, status: "succeeded", downloadUrl: signed.signedUrl };
   }
 
@@ -230,7 +254,7 @@ export async function checkExportProgress(input: CheckExportProgressInput): Prom
   // guarantee intact and the export retryable.
   try {
     const ref = unpackRenderRef(job.server);
-    if (!ref) return { ok: false, error: "Render job is missing its render reference." };
+    if (!ref) return { ok: false, error: "Render job is missing its render reference.", transient: false };
 
     const progress = await input.render.getRenderProgress(ref.renderId, ref.bucketName);
 
@@ -253,7 +277,7 @@ export async function checkExportProgress(input: CheckExportProgressInput): Prom
       return { ok: true, status: "failed", error: message };
     }
 
-    if (!job.project_id) return { ok: false, error: "Render job is missing its project reference." };
+    if (!job.project_id) return { ok: false, error: "Render job is missing its project reference.", transient: false };
     const path = buildFinalVideoPath(input.ownerId, job.project_id, job.id);
     const uploaded = await uploadFinalVideo(input.storage, path, downloaded.buffer, downloaded.contentType);
     if (!uploaded.ok) {
@@ -343,4 +367,42 @@ export async function findLatestCompletedExport(input: FindLatestCompletedExport
   if (!signed.ok) return { ok: false, error: signed.error };
 
   return { ok: true, found: true, downloadUrl: signed.signedUrl, renderJobId: renderJob.id };
+}
+
+/** The minimal `render_jobs` lookup findActiveExport needs — keyed by project id, unlike RenderJobsClient's selectRenderJob (keyed by render job id). */
+export type ActiveExportRenderJobsClient = {
+  /** The current owner's most recent queued/processing render job for this project, or null if none is active. Must be scoped to `ownerId`. */
+  selectActiveRenderJobForProject(
+    projectId: string,
+    ownerId: string,
+  ): Promise<{ id: string; status: "queued" | "processing"; progress: number } | null>;
+};
+
+export type FindActiveExportInput = {
+  renderJobs: ActiveExportRenderJobsClient;
+  ownerId: string;
+  projectId: string;
+};
+
+export type FindActiveExportResult =
+  | { found: true; renderJobId: string; status: "queued" | "processing"; progress: number }
+  | { found: false };
+
+/**
+ * Looks up whether this project already has a real, still-running export —
+ * a `queued`/`processing` render_jobs row — so reopening/reloading a
+ * project can RESUME tracking the SAME paid Remotion Lambda render instead
+ * of the user starting (and paying for) a duplicate one, and instead of a
+ * render that's genuinely still progressing in AWS being silently
+ * abandoned client-side (see the production incident this addresses: a
+ * transient polling read error previously made the client give up on a
+ * render forever, with nothing left in the UI to resume it). Has no
+ * RenderClient dependency at all — it is structurally impossible for this
+ * function to call startRender or otherwise start/duplicate a render; it
+ * only ever reads the existing render_jobs row.
+ */
+export async function findActiveExport(input: FindActiveExportInput): Promise<FindActiveExportResult> {
+  const job = await input.renderJobs.selectActiveRenderJobForProject(input.projectId, input.ownerId);
+  if (!job) return { found: false };
+  return { found: true, renderJobId: job.id, status: job.status, progress: job.progress };
 }

@@ -3,12 +3,14 @@ import {
   startExport,
   checkExportProgress,
   findLatestCompletedExport,
+  findActiveExport,
   type VideosClient,
   type RenderJobsClient,
   type VideoRow,
   type RenderJobRow,
   type LatestExportVideosClient,
   type LatestExportRenderJobsClient,
+  type ActiveExportRenderJobsClient,
 } from "@/lib/render/export-orchestration";
 import { saveGeneratedProject, saveProjectNarration, type ProjectsClient, type ProjectRow, type ProjectAssetsClient, type PersistedVideoAssetRow } from "@/lib/actions/project-persistence";
 import type { EntitlementClient } from "@/lib/supabase/usage";
@@ -184,8 +186,8 @@ function makeFakeRenderJobsClient() {
     },
     async selectRenderJob(id, ownerId) {
       const existing = rows.get(id);
-      if (!existing || existing.user_id !== ownerId) return null;
-      return existing;
+      if (!existing || existing.user_id !== ownerId) return { ok: true, job: null };
+      return { ok: true, job: existing };
     },
     async hasActiveJobForProject(ownerId, projectId) {
       for (const row of rows.values()) {
@@ -594,7 +596,7 @@ describe("checkExportProgress", () => {
       renderJobId: setup.renderJobId,
     });
 
-    expect(result).toEqual({ ok: false, error: "Render job not found." });
+    expect(result).toEqual({ ok: false, error: "Render job not found.", transient: false });
   });
 
   it("re-signs a fresh URL (never a cached one) when polled again after already succeeding", async () => {
@@ -718,5 +720,101 @@ describe("findLatestCompletedExport", () => {
     const result = await findLatestCompletedExport({ videos, renderJobs, storage, ownerId: OWNER_A, projectId: "project-1" });
 
     expect(result).toEqual({ ok: false, error: "Storage is unavailable." });
+  });
+});
+
+/**
+ * Production incident fix: checkExportProgress must distinguish a transient
+ * SELECT failure (`selectRenderJob` returning `{ok:false}`) from a
+ * genuinely missing row (`{ok:true, job:null}`) — collapsing both into
+ * `null` is exactly what made one flaky read during a long poll loop look
+ * identical to "this render job never existed."
+ */
+describe("checkExportProgress (transient vs. genuine not-found)", () => {
+  it("(Supabase query error is not interpreted as 'Render job not found') marks the result transient:true with the real query error, never the generic not-found message", async () => {
+    const { client: videos } = makeFakeVideosClient();
+    const renderJobs: RenderJobsClient = {
+      insertRenderJob: vi.fn(),
+      updateRenderJob: vi.fn(),
+      hasActiveJobForProject: vi.fn().mockResolvedValue(false),
+      async selectRenderJob() {
+        return { ok: false, error: "Connection terminated unexpectedly." };
+      },
+    };
+
+    const result = await checkExportProgress({
+      renderJobs,
+      videos,
+      render: fakeRenderClient(),
+      storage: fakeNarrationStorage(),
+      downloadFile: fakeDownloadFile(),
+      ownerId: OWNER_A,
+      renderJobId: "job-1",
+    });
+
+    expect(result).toEqual({ ok: false, error: "Connection terminated unexpectedly.", transient: true });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).not.toBe("Render job not found.");
+    }
+  });
+
+  it("a genuinely missing row (query succeeded, no row) is still reported not found, and NOT marked transient", async () => {
+    const { client: videos } = makeFakeVideosClient();
+    const renderJobs: RenderJobsClient = {
+      insertRenderJob: vi.fn(),
+      updateRenderJob: vi.fn(),
+      hasActiveJobForProject: vi.fn().mockResolvedValue(false),
+      async selectRenderJob() {
+        return { ok: true, job: null };
+      },
+    };
+
+    const result = await checkExportProgress({
+      renderJobs,
+      videos,
+      render: fakeRenderClient(),
+      storage: fakeNarrationStorage(),
+      downloadFile: fakeDownloadFile(),
+      ownerId: OWNER_A,
+      renderJobId: "job-1",
+    });
+
+    expect(result).toEqual({ ok: false, error: "Render job not found.", transient: false });
+  });
+});
+
+/**
+ * The "resume an already-running export" recovery path — reopening a
+ * project must be able to pick a genuinely active render back up without
+ * ever calling startRender again. findActiveExport's own input type has no
+ * RenderClient at all, matching findLatestCompletedExport's guarantee.
+ */
+describe("findActiveExport", () => {
+  function fakeActiveRenderJobs(job: { id: string; status: "queued" | "processing"; progress: number } | null): ActiveExportRenderJobsClient {
+    return { selectActiveRenderJobForProject: vi.fn().mockResolvedValue(job) };
+  }
+
+  it("(resume-existing-job path does not call startRender) returns the existing render job's id/status/progress for a still-processing job", async () => {
+    const renderJobs = fakeActiveRenderJobs({ id: "job-42", status: "processing", progress: 0.46 });
+
+    const result = await findActiveExport({ renderJobs, ownerId: OWNER_A, projectId: "project-1" });
+
+    expect(result).toEqual({ found: true, renderJobId: "job-42", status: "processing", progress: 0.46 });
+    // Structural guarantee: FindActiveExportInput has no `render`/RenderClient field at all —
+    // there is no dependency this function could even call to start a render.
+    expect(renderJobs.selectActiveRenderJobForProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns found:false when the project has no queued/processing render job", async () => {
+    const renderJobs = fakeActiveRenderJobs(null);
+    const result = await findActiveExport({ renderJobs, ownerId: OWNER_A, projectId: "project-1" });
+    expect(result).toEqual({ found: false });
+  });
+
+  it("(current-user scoping is preserved) scopes the lookup to the exact ownerId and projectId passed in", async () => {
+    const renderJobs = fakeActiveRenderJobs({ id: "job-42", status: "queued", progress: 0 });
+    await findActiveExport({ renderJobs, ownerId: "the-current-users-id", projectId: "the-project-id" });
+    expect(renderJobs.selectActiveRenderJobForProject).toHaveBeenCalledWith("the-project-id", "the-current-users-id");
   });
 });

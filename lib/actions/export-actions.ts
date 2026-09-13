@@ -8,18 +8,24 @@ import {
   startExport,
   checkExportProgress,
   findLatestCompletedExport,
+  findActiveExport,
   type VideosClient,
   type RenderJobsClient,
   type NewVideoRow,
   type VideoRow,
   type NewRenderJobRow,
-  type RenderJobRow,
   type StartExportResult,
   type CheckExportProgressResult,
   type FindLatestCompletedExportResult,
+  type FindActiveExportResult,
 } from "@/lib/render/export-orchestration";
 
-export type { StartExportResult, CheckExportProgressResult, FindLatestCompletedExportResult } from "@/lib/render/export-orchestration";
+export type {
+  StartExportResult,
+  CheckExportProgressResult,
+  FindLatestCompletedExportResult,
+  FindActiveExportResult,
+} from "@/lib/render/export-orchestration";
 
 /**
  * Thin "use server" wrappers around lib/render/export-orchestration.ts's
@@ -71,14 +77,20 @@ async function renderJobsClientForCurrentUser(): Promise<RenderJobsClient> {
       if (error) return { ok: false, error: error.message };
       return { ok: true };
     },
-    async selectRenderJob(id, ownerId): Promise<RenderJobRow | null> {
-      const { data } = await supabase
+    async selectRenderJob(id, ownerId) {
+      const { data, error } = await supabase
         .from("render_jobs")
         .select("id, project_id, video_id, status, progress, server, error_message")
         .eq("id", id)
         .eq("user_id", ownerId)
         .maybeSingle();
-      return data;
+      // A real query/network/PostgREST error is surfaced distinctly from a
+      // genuinely missing row (`data: null` with no `error`) — collapsing
+      // both into `null` (the pre-fix shape) is what let one transient poll
+      // failure during a long render look exactly like the job never
+      // existed, permanently stopping ExportPanel's polling.
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, job: data };
     },
     async hasActiveJobForProject(ownerId, projectId) {
       const { count } = await supabase
@@ -185,6 +197,44 @@ export async function getLatestCompletedExportAction(projectId: string): Promise
       },
     },
     storage: supabase.storage,
+    ownerId: user.id,
+    projectId,
+  });
+}
+
+/**
+ * Checked on mount/projectId-change by ExportPanel.tsx (alongside
+ * getLatestCompletedExportAction above) so reopening/reloading a project
+ * that already has a real, still-running export (queued/processing)
+ * RESUMES tracking that same paid render instead of the user starting a
+ * duplicate one, and instead of it being silently abandoned client-side —
+ * the exact recovery path for the production incident this whole fix
+ * addresses (a transient polling read error previously made the client
+ * give up on a render forever). Same authenticated, RLS-scoped client
+ * (never service-role); scoped to the caller's own `owner_id`/`user_id`.
+ * Never calls RemotionLambdaRenderClient — this is a pure read of the
+ * existing render_jobs row, so resuming can never start or duplicate a
+ * render.
+ */
+export async function getActiveExportAction(projectId: string): Promise<FindActiveExportResult> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  return findActiveExport({
+    renderJobs: {
+      async selectActiveRenderJobForProject(pid, ownerId) {
+        const { data } = await supabase
+          .from("render_jobs")
+          .select("id, status, progress")
+          .eq("project_id", pid)
+          .eq("user_id", ownerId)
+          .in("status", ["queued", "processing"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return data as { id: string; status: "queued" | "processing"; progress: number } | null;
+      },
+    },
     ownerId: user.id,
     projectId,
   });
